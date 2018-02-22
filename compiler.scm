@@ -497,6 +497,7 @@
                 ;(display `(constlist: ,consts)) 
                 ;(newline)
                 ;(display `(const-table: ,consts-table))
+                ;(newline)
                 ;(initialize-consts-table-to-asm)
                 ;(newline)
                 ;(display `(global-table: ,global-var-table))
@@ -629,7 +630,7 @@
                 "CLOSURE_CODE rax \n"
                 "call rax \n"
                 "mov rbx, qword [rsp + 8] \n"
-                "add rbx, 2 \n"
+                "add rbx, 3 \n"
                 "shl rbx, 3 \n"
                 "add rsp, rbx \n"))))
 ;;                 (if (eq? (car func) 'lambda-opt)
@@ -782,9 +783,10 @@
             (if (zero? num-of-params)
                 ""
                 (string-append
-                    "add " reg ", 8*" (number->string count) " \n"
+                    ;"add " reg ", 8*" (number->string count) " \n"
                     "mov rdx,[rbp + (4 + " (number->string count) ")*8] \n"
                     "mov qword [" reg "], rdx \n" 
+                    "add " reg ", 8 \n"
                     (copy-to-memory-params (- num-of-params 1) reg (+ 1 count))))))
                             
 (define copy-to-memory-env
@@ -792,9 +794,11 @@
             (if (zero? num-of-params)
                 ""
                 (string-append
-                    "add " reg ", 8*" (number->string count) " \n"
-                    "mov rdx, [rdx + 8*" (number->string count) "] \n"
+                    ;"add " reg ", 8*" (number->string count) " \n"
+                    
+                    "mov rdx, [r15 + 8*" (number->string count) "] \n"
                     "mov qword [" reg "], rdx \n" 
+                    "add " reg ", 8 \n"
                     (copy-to-memory-env (- num-of-params 1) reg (+ 1 count))))))
 				
 (define code-gen-lambda-simple
@@ -819,6 +823,7 @@
                     (copy-to-memory-params last-params "rcx" 0)
                     "add rsi, 8 \n"
                     "mov rdx,[rbp + 2*8] \n"
+                    "mov r15, rdx \n"
                     (copy-to-memory-env env "rsi" 0)
                     "MAKE_LITERAL_CLOSURE rax, rbx, " code-lable "\n"
                     ;"mov rax, [rax] \n"
