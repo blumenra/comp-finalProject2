@@ -441,11 +441,11 @@
 (define make-epilogue
     (lambda ()
         (string-append
-            "remove_from_stack: \n"
-            "cmp qword [rsp], L_const2 \n"
-            "jne END_of_program \n"
-            "add rsp, 8 \n"
-            "jmp remove_from_stack \n"
+;;             "remove_from_stack: \n"
+;;             "cmp qword [rsp], L_const2 \n"
+;;             "jne END_of_program \n"
+;;             "add rsp, 8 \n"
+;;             "jmp remove_from_stack \n"
             "END_of_program: \n"
             "\n"
             "ret\n"
@@ -531,6 +531,9 @@
 
 (define make-gen-lambda-lable (make-lable-count "L_lambda_code"))
 (define gen-lambda-lable (make-gen-lambda-lable)) 
+
+(define make-gen-remove-nils-labels (make-lable-count "L_remove_nils"))
+(define gen-remove-nils-lable (make-gen-remove-nils-labels)) 
         
 (define code-gen-const
     (lambda (exp env)
@@ -630,9 +633,20 @@
                 "CLOSURE_CODE rax \n"
                 "call rax \n"
                 "mov rbx, qword [rsp + 8] \n"
-                "add rbx, 3 \n"
+                "add rbx, 2 \n"
                 "shl rbx, 3 \n"
-                "add rsp, rbx \n"))))
+                "add rsp, rbx \n"
+                (gen-remove-nils-lable) ": \n"
+                ".remove_from_stack: \n"
+                "cmp qword [rsp], L_const2 \n"
+                "jne .cont \n"
+                "add rsp, 8 \n"
+                "jmp .remove_from_stack \n"
+                ".cont: \n"
+                "\n"
+                
+                
+                ))))
 ;;                 (if (eq? (car func) 'lambda-opt)
 ;;                     (if (eq? (length (cadr func)) num-of-params)
 ;;                         (string-append "add rsp, 8 * (3 + " (number->string (length (cadr func))) ") \n")
