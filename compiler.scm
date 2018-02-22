@@ -442,11 +442,11 @@
 (define make-epilogue
     (lambda ()
         (string-append
-;;             "remove_from_stack: \n"
-;;             "cmp qword [rsp], L_const2 \n"
-;;             "jne END_of_program \n"
-;;             "add rsp, 8 \n"
-;;             "jmp remove_from_stack \n"
+            "remove_from_stack: \n"
+            "cmp qword [rsp], L_const2 \n"
+            "jne END_of_program \n"
+            "add rsp, 8 \n"
+            "jmp remove_from_stack \n"
             "END_of_program: \n"
             "\n"
             "ret\n"
@@ -648,17 +648,13 @@
                 "cmp qword [rsp], L_const2 \n"
                 "jne .cont \n"
                 "add rsp, 8 \n"
-                "jmp .remove_from_stack \n"
+                ;"jmp .remove_from_stack \n"
                 ".cont: \n"
                 "\n"
                 
                 
                 ))))
-;;                 (if (eq? (car func) 'lambda-opt)
-;;                     (if (eq? (length (cadr func)) num-of-params)
-;;                         (string-append "add rsp, 8 * (3 + " (number->string (length (cadr func))) ") \n")
-;;                         (string-append "add rsp, 8 * (3 + " (number->string (+ 1 (length (cadr func)))) ") \n"))
-;;                    (string-append "add rsp, 8 * (3 + " (number->string num-of-params) ") \n"))))))
+
 
                 
 (define override-frame
@@ -666,10 +662,11 @@
             (if (zero? index)
                 ""
                 (string-append
-                    "sub r8 , 8 \n"
-                    "sub r9 , 8 \n"
+                    
                     "mov rcx, [r8] \n"
                     "mov [r9], rcx \n"
+                    "sub r8 , 8 \n"
+                    "sub r9 , 8 \n"
                     (override-frame (- index 1))))))
                     
                     
@@ -699,9 +696,12 @@
                 
                 "mov r9, r8 \n"
                 ;"add r9, 8*" (number->string (+ 5 num-of-params)) " \n"
-                "add r9, 8*" (number->string (+ 4 num-of-params)) " \n"
-
+                "add r9, 8*" (number->string (+ 3 num-of-params)) " \n"
+                
+                "sub r8 , 8 \n"
                 (override-frame (+ 4 num-of-params)) ; copy the following from new frame to old frame: null, num_of_args, env (4), n-args (num-of-params)
+                "add r9 , 8 \n"
+                
                 "mov rsp, r9 \n"
                 "mov rax, [rax] \n"
                 "CLOSURE_CODE rax \n"
