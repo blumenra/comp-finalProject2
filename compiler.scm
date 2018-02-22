@@ -874,7 +874,7 @@
             
                 "push qword L_const2   ; push nil to as first argument \n"
                 "push qword [" i "]      ; push the first element of the iteration \n"
-                "push 2            ; push num of args \n"
+                "push 3            ; push num of args \n"
                 "push L_const2     ; push empty env (only to keep the form) \n"
                 "call L_cons       ; the return value will be stored in rax \n"
                 "add rsp, 8*4 \n"
@@ -888,7 +888,7 @@
                 "   \n"
                 "   push rax          ; push the last created pair to be the cdr \n"
                 "   push qword [" i "]      ; push next arg to be the car of the pair \n"
-                "   push 2            ; push num of args (car and cdr) \n"
+                "   push 3            ; push num of args (car and cdr) \n"
                 "   push L_const2     ; push empty env (only to keep the form) \n"
                 "   call L_cons       ; the return value will be stored in rax \n"
                 "   add rsp, 8*4 \n"
@@ -957,9 +957,9 @@
                     "shl r10, 3  ; r10 = r13*8\n"
                     "add r12, r10 \n"
                     "mov r11, r12 ; In order to keep the initial point \n"
-                    "add r11, 8  ; points to nil which is the first argument in any frame \n"
+                    ;"add r11, 8  ; points to nil which is the first argument in any frame \n"
 					
-                    "sub r13, " (number->string num-of-params) " \n"
+                    "sub r13, " (number->string (+ num-of-params 1)) " \n"
                     ;"cmp r13, 0 \n"
                     ;"jne continue \n"
                     ;"add r11, 8  ; points to nil which is the first argument in any frame \n"
@@ -970,6 +970,8 @@
                     ";r13 = num of params (only those from the list) \n"
                     ";r11 = nil which is the first argument in any frame \n"
 
+                    "sub r12, 8 \n" ; r12 will point on the last element in order to start the iteration
+                    
                     (create_list_from_lambda_opt_params "r12" "r13")
 					
                     ;"mov r13, [rbp+ 8*3] \n"
