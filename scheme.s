@@ -42,7 +42,19 @@
 %endmacro
 
 
+%macro CHECK_ARG_NUM_CORRECTNESS 1
 
+    push rbx
+    mov rbx, [rbp + 8*3]
+    sub rbx, 1
+    cmp rbx , %1
+    jne L_incorrect_num_of_args
+    pop rbx
+    
+%endmacro
+                
+                
+                
 ;; my_idiv %1/%2
 %macro my_idiv 2
 

@@ -627,7 +627,7 @@
             (string-append
                 "push L_const2 \n" ;push '() to stack
                 (params-code-gen params env) ;push evaluated params reversely to stack
-                "push " (number->string num-of-params) "\n"
+                "push " (number->string (+ 1 num-of-params)) "\n"
                 (code-gen proc env)
                 "mov rbx, [rax] \n"
                 "TYPE rbx \n"
@@ -644,13 +644,13 @@
                 "shl rbx, 3 \n"
                 "add rsp, rbx \n"
                 (gen-remove-nils-lable) ": \n"
-                ".remove_from_stack: \n"
-                "cmp qword [rsp], L_const2 \n"
-                "jne .cont \n"
-                "add rsp, 8 \n"
-                ;"jmp .remove_from_stack \n"
-                ".cont: \n"
-                "\n"
+;;                 ".remove_from_stack: \n"
+;;                 "cmp qword [rsp], L_const2 \n"
+;;                 "jne .cont \n"
+;;                 "add rsp, 8 \n"
+;;                 ;"jmp .remove_from_stack \n"
+;;                 ".cont: \n"
+;;                 "\n"
                 
                 
                 ))))
@@ -673,7 +673,7 @@
 (define code-gen-tc-applic
     (lambda (exp env)
         (let* ((params (caddr exp))
-            (num-of-params (length params))
+            (num-of-params (+ 1 (length params)))
             (proc (cadr exp)))
             (string-append
                 "push L_const2              ;push '() to stack \n" 
@@ -693,13 +693,12 @@
                 "push rdi \n"
                 
                 "mov r8, rbp \n"
+                "sub r8 , 8 \n"
                 
                 "mov r9, r8 \n"
-                ;"add r9, 8*" (number->string (+ 5 num-of-params)) " \n"
                 "add r9, 8*" (number->string (+ 3 num-of-params)) " \n"
                 
-                "sub r8 , 8 \n"
-                (override-frame (+ 4 num-of-params)) ; copy the following from new frame to old frame: null, num_of_args, env (4), n-args (num-of-params)
+                (override-frame (+ 3 num-of-params)) ; copy the following from new frame to old frame: null, num_of_args, env (4), n-args (num-of-params)
                 "add r9 , 8 \n"
                 
                 "mov rsp, r9 \n"
@@ -825,12 +824,12 @@
 (define code-gen-lambda-simple
     (lambda (exp env)
         (let* 
-            ((params (cadr exp))
-            (num-of-params (length params))
-            (last-params num_of_last_param)
-            (body (cddr exp))
-            (code-lable (gen-lambda-lable))
-            (end-lambda-lable (string-append "END_" code-lable)))
+            ((params (cadr exp))                                    ; (x y z)
+            (num-of-params (length params))                         ; 3
+            (last-params num_of_last_param)                         ; 0 (initially)
+            (body (cddr exp))                                       ; (e1 e1 ..)
+            (code-lable (gen-lambda-lable))                         ; L_lambda_code75
+            (end-lambda-lable (string-append "END_" code-lable)))   ; END_L_lambda_code75
                 (set! num_of_last_param num-of-params)
                 (string-append
                     "mov rax, [malloc_pointer] \n"
@@ -838,9 +837,13 @@
                     "mov rbx, [malloc_pointer] \n"
                     "my_malloc (8*" (number->string (+ 1 env)) ") \n"
                     "mov rcx, [malloc_pointer] \n"
-                    "my_malloc (8*" (number->string last-params) ") \n"
+                    "my_malloc (8*" (number->string last-params) ") \n" ; maybe last-params should be last-params+1
                     "mov rsi, rbx \n"
                     "mov qword [rsi], rcx \n"
+                    ;; At this point the environment for the lambda is ready with malloc. rax -> closure place
+                                                                                        ; rbx -> env place
+                                                                                        ; rcx = pointer for expanding the environment
+                    
                     (copy-to-memory-params last-params "rcx" 0)
                     "add rsi, 8 \n"
                     "mov rdx,[rbp + 2*8] \n"
@@ -1031,9 +1034,7 @@
                 "L_" str-pred ": \n"
                 "push rbp \n"
                 "mov rbp, rsp \n"
-                "mov rbx, [rbp + 8*3] \n"
-                "cmp rbx , 1 \n"
-                "jne L_error \n"
+                "CHECK_ARG_NUM_CORRECTNESS 1 \n"
                 "mov rbx, [rbp + 8*4] \n"
                 "mov rbx, [rbx] \n"
                 "TYPE rbx \n"
@@ -1063,9 +1064,7 @@
                 "L_car: \n"
                 "push rbp \n"
                 "mov rbp, rsp \n"
-                "mov rbx, [rbp + 8*3] \n"
-                "cmp rbx , 1 \n"
-                "jne L_incorrect_num_of_args \n"
+                "CHECK_ARG_NUM_CORRECTNESS 1 \n"
                 "mov rbx, [rbp + 8*4] \n"
 				"mov rbx, [rbx] \n"
 				"mov rax, rbx \n"
@@ -1093,9 +1092,7 @@
                 "L_cdr: \n"
                 "push rbp \n"
                 "mov rbp, rsp \n"
-                "mov rbx, [rbp + 8*3] \n"
-                "cmp rbx , 1 \n"
-                "jne L_incorrect_num_of_args \n"
+                "CHECK_ARG_NUM_CORRECTNESS 1 \n"
                 "mov rbx, [rbp + 8*4] \n"
 				"mov rbx, [rbx] \n"
 				"mov rax, rbx \n"
@@ -1122,9 +1119,7 @@
                 "L_integer_to_char: \n"
                 "push rbp \n"
                 "mov rbp, rsp \n"
-                "mov rbx, [rbp + 8*3] \n"
-                "cmp rbx , 1 \n"
-                "jne L_incorrect_num_of_args \n"
+                "CHECK_ARG_NUM_CORRECTNESS 1 \n"
                 "mov rax, [rbp + 8*4] \n"
                 "mov rax, [rax] \n"
                 "mov rbx, rax \n"
@@ -1156,9 +1151,7 @@
                 "L_char_to_integer: \n"
                 "push rbp \n"
                 "mov rbp, rsp \n"
-                "mov rbx, [rbp + 8*3] \n"
-                "cmp rbx , 1 \n"
-                "jne L_incorrect_num_of_args \n"
+                "CHECK_ARG_NUM_CORRECTNESS 1 \n"
                 "mov rax, [rbp + 8*4] \n"
                 "mov rax, [rax] \n"
                 "mov rbx, rax \n"
@@ -1192,9 +1185,7 @@
                 "mov rbp, rsp \n"
                 
                              
-                "mov rbx, [rbp + 8*3] \n"
-                "cmp rbx , 2 \n"
-                "jne L_incorrect_num_of_args \n"
+                "CHECK_ARG_NUM_CORRECTNESS 2 \n"
                 "mov r8, [malloc_pointer] \n"
                 "my_malloc 8 \n"
                 "mov rbx,[rbp + 8*4] \n"
@@ -1233,11 +1224,12 @@
                 "L_zero: \n"
                 "push rbp \n"
                 "mov rbp, rsp \n"
-                "mov rbx, [rbp + 8*3] \n"
-                "cmp rbx , 1 \n"
-                "jne L_incorrect_num_of_args \n"
+
+                "CHECK_ARG_NUM_CORRECTNESS 1 \n"
+                
                 "mov rbx, [rbp + 8*4] \n"
-				"mov rbx, [rbx] \n"
+                "mov rbx, [rbx] \n"
+ 
                 "DATA rbx \n"
                 "cmp rbx, 0 \n"
                 "jne not_zero \n"
@@ -1265,9 +1257,7 @@
                 "L_not: \n"
                 "push rbp \n"
                 "mov rbp, rsp \n"
-                "mov rbx, [rbp + 8*3] \n"
-                "cmp rbx , 1 \n"
-                "jne L_incorrect_num_of_args \n"
+                "CHECK_ARG_NUM_CORRECTNESS 1 \n"
                 "mov rbx, [rbp + 8*4] \n"
 				"mov rbx, [rbx] \n"
                 "DATA rbx \n"
@@ -1299,9 +1289,7 @@
                 "L_eq: \n"
                 "push rbp \n"
                 "mov rbp, rsp \n"
-                "mov rbx, [rbp + 8*3] \n"
-                "cmp rbx , 2 \n"
-                "jne L_incorrect_num_of_args \n"
+                "CHECK_ARG_NUM_CORRECTNESS 2 \n"
                 "mov rbx, [rbp + 8*4] \n"
                 "mov rcx, [rbp + 8*5] \n"
                 "cmp rbx, rcx \n"
@@ -1330,9 +1318,7 @@
                 "L_string_len: \n"
                 "push rbp \n"
                 "mov rbp, rsp \n"
-                "mov rbx, [rbp + 8*3] \n"
-                "cmp rbx , 1 \n"
-                "jne L_incorrect_num_of_args \n"
+                "CHECK_ARG_NUM_CORRECTNESS 1 \n"
                 "mov rax, [rbp + 8*4] \n"
                 "mov rax, [rax] \n"
                 "mov rbx, rax \n"
@@ -1364,9 +1350,7 @@
                 "L_string_ref: \n"
                 "push rbp \n"
                 "mov rbp, rsp \n"
-                "mov rbx, [rbp + 8*3] \n"
-                "cmp rbx , 2 \n"
-                "jne L_incorrect_num_of_args \n"
+                "CHECK_ARG_NUM_CORRECTNESS 2 \n"
                 "mov rax, [rbp + 8*4] \n"
                 "mov rax, [rax] \n"
                 "mov rbx, rax \n"
@@ -1406,9 +1390,7 @@
                 "L_string_set: \n"
                 "push rbp \n"
                 "mov rbp, rsp \n"
-                "mov rbx, [rbp + 8*3] \n"
-                "cmp rbx , 3 \n"
-                "jne L_incorrect_num_of_args \n"
+                "CHECK_ARG_NUM_CORRECTNESS 3 \n"
                 "mov rax, [rbp + 8*4] \n"
                 "mov rax, [rax] \n"
                 "mov rbx, rax \n"
@@ -1452,9 +1434,7 @@
                 "L_make_string: \n"
                 "push rbp \n"
                 "mov rbp, rsp \n"
-                "mov rbx, [rbp + 8*3] \n"
-                "cmp rbx , 2 \n"
-                "jne L_incorrect_num_of_args \n"
+                "CHECK_ARG_NUM_CORRECTNESS 2 \n"
                 "mov rax, [rbp + 8*4] \n"
                 "mov rax, [rax] \n"
                 "mov rbx, rax \n"
@@ -1523,9 +1503,7 @@
                 "L_vector_len: \n"
                 "push rbp \n"
                 "mov rbp, rsp \n"
-                "mov rbx, [rbp + 8*3] \n"
-                "cmp rbx , 1 \n"
-                "jne L_incorrect_num_of_args \n"
+                "CHECK_ARG_NUM_CORRECTNESS 1 \n"
                 "mov rax, [rbp + 8*4] \n"
                 "mov rax, [rax] \n"
                 "mov rbx, rax \n"
@@ -1557,9 +1535,7 @@
                 "L_vector_set: \n"
                 "push rbp \n"
                 "mov rbp, rsp \n"
-                "mov rbx, [rbp + 8*3] \n"
-                "cmp rbx , 3 \n"
-                "jne L_incorrect_num_of_args \n"
+                "CHECK_ARG_NUM_CORRECTNESS 3 \n"
                 "mov rax, [rbp + 8*4] \n"
                 "mov rax, [rax] \n"
                 "mov rbx, rax \n"
@@ -1600,9 +1576,7 @@
                 "L_vector_ref: \n"
                 "push rbp \n"
                 "mov rbp, rsp \n"
-                "mov rbx, [rbp + 8*3] \n"
-                "cmp rbx , 2 \n"
-                "jne L_incorrect_num_of_args \n"
+                "CHECK_ARG_NUM_CORRECTNESS 2 \n"
                 "mov rax, [rbp + 8*4] \n"
                 "mov rax, [rax] \n"
                 "mov rbx, rax \n"
@@ -1640,9 +1614,7 @@
                 "L_set_car: \n"
                 "push rbp \n"
                 "mov rbp, rsp \n"
-                "mov rbx, [rbp + 8*3] \n"
-                "cmp rbx , 2 \n"
-                "jne L_incorrect_num_of_args \n"
+                "CHECK_ARG_NUM_CORRECTNESS 2 \n"
                 "mov rax, [rbp + 8*4] \n"
 				"mov rcx, [rbp + 8*5] \n"
 				"mov rcx, [rcx] \n"
@@ -1673,9 +1645,7 @@
                 "L_set_cdr: \n"
                 "push rbp \n"
                 "mov rbp, rsp \n"
-                "mov rbx, [rbp + 8*3] \n"
-                "cmp rbx , 2 \n"
-                "jne L_incorrect_num_of_args \n"
+                "CHECK_ARG_NUM_CORRECTNESS 2 \n"
                 "mov rax, [rbp + 8*4] \n"
 				"mov rcx, [rbp + 8*5] \n"
 				"mov rcx, [rcx] \n"
@@ -1706,9 +1676,7 @@
                 "L_remainder: \n"
                 "push rbp \n"
                 "mov rbp, rsp \n"
-                "mov rbx, [rbp + 8*3] \n"
-                "cmp rbx , 2 \n"
-                "jne L_incorrect_num_of_args \n"
+                "CHECK_ARG_NUM_CORRECTNESS 2 \n"
                 "mov rax, [rbp + 8*4] \n"
                 "mov rax, [rax] \n"
                 "mov rbx, rax \n"
@@ -1765,9 +1733,7 @@
                 "L_smaller_then_bin: \n"
                 "push rbp \n"
                 "mov rbp, rsp \n"
-                "mov rbx, [rbp + 8*3] \n"
-                "cmp rbx , 2 \n"
-                "jne L_incorrect_num_of_args \n"
+                "CHECK_ARG_NUM_CORRECTNESS 2 \n"
                 "mov rax, [rbp + 8*4] \n"
                 "mov rax, [rax] \n"
                 "mov rbx, rax \n"
@@ -1868,9 +1834,7 @@
                 "L_bigger_then_bin: \n"
                 "push rbp \n"
                 "mov rbp, rsp \n"
-                "mov rbx, [rbp + 8*3] \n"
-                "cmp rbx , 2 \n"
-                "jne L_incorrect_num_of_args \n"
+                "CHECK_ARG_NUM_CORRECTNESS 2 \n"
                 "mov rax, [rbp + 8*4] \n"
                 "mov rax, [rax] \n"
                 "mov rbx, rax \n"
@@ -1972,9 +1936,7 @@
                 "L_equals_bin: \n"
                 "push rbp \n"
                 "mov rbp, rsp \n"
-                "mov rbx, [rbp + 8*3] \n"
-                "cmp rbx , 2 \n"
-                "jne L_incorrect_num_of_args \n"
+                "CHECK_ARG_NUM_CORRECTNESS 2 \n"
                 "mov rax, [rbp + 8*4] \n"
                 "mov rax, [rax] \n"
                 "mov rbx, rax \n"
@@ -2070,10 +2032,7 @@
                 "L_plus_bin: \n"
                 "push rbp \n"
                 "mov rbp, rsp \n"
-                "mov rbx, [rbp + 8*3] \n"
-                "cmp rbx , 2 \n"
-                "bla: \n"
-                "jne L_incorrect_num_of_args \n"
+                "CHECK_ARG_NUM_CORRECTNESS 2 \n"
                 "mov rax, [rbp + 8*4] \n"
                 "mov rax, [rax] \n"
                 "mov rbx, rax \n"
@@ -2213,9 +2172,7 @@
                 "L_minus_bin: \n"
                 "push rbp \n"
                 "mov rbp, rsp \n"
-                "mov rbx, [rbp + 8*3] \n"
-                "cmp rbx , 2 \n"
-                "jne L_incorrect_num_of_args \n"
+                "CHECK_ARG_NUM_CORRECTNESS 2 \n"
                 "mov rax, [rbp + 8*4] \n"
                 "mov rax, [rax] \n"
                 "mov rbx, rax \n"
@@ -2356,9 +2313,7 @@
                 "L_mul_bin: \n"
                 "push rbp \n"
                 "mov rbp, rsp \n"
-                "mov rbx, [rbp + 8*3] \n"
-                "cmp rbx , 2 \n"
-                "jne L_incorrect_num_of_args \n"
+                "CHECK_ARG_NUM_CORRECTNESS 2 \n"
                 "mov rax, [rbp + 8*4] \n"
                 "mov rax, [rax] \n"
                 "mov rbx, rax \n"
@@ -2491,9 +2446,7 @@
                 "L_div_bin: \n"
                 "push rbp \n"
                 "mov rbp, rsp \n"
-                "mov rbx, [rbp + 8*3] \n"
-                "cmp rbx , 2 \n"
-                "jne L_incorrect_num_of_args \n"
+                "CHECK_ARG_NUM_CORRECTNESS 2 \n"
                 "mov rax, [rbp + 8*4] \n"
                 "mov rax, [rax] \n"
                 "mov rbx, rax \n"
@@ -2622,9 +2575,7 @@
                 "L_numerator: \n"
                 "push rbp \n"
                 "mov rbp, rsp \n"
-                "mov rbx, [rbp + 8*3] \n"
-                "cmp rbx , 1 \n"
-                "jne L_incorrect_num_of_args \n"
+                "CHECK_ARG_NUM_CORRECTNESS 1 \n"
                 "mov rbx, [rbp + 8*4] \n"
                 "mov rbx, [rbx] \n"
                 "mov rax, rbx \n"
@@ -2660,9 +2611,7 @@
                 "L_denominator: \n"
                 "push rbp \n"
                 "mov rbp, rsp \n"
-                "mov rbx, [rbp + 8*3] \n"
-                "cmp rbx , 1 \n"
-                "jne L_incorrect_num_of_args \n"
+                "CHECK_ARG_NUM_CORRECTNESS 1 \n"
                 "mov rbx, [rbp + 8*4] \n"
                 "mov rbx, [rbx] \n"
                 "mov rax, rbx \n"
