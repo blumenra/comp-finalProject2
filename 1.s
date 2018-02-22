@@ -28,12 +28,16 @@ L_const5:
 	dq MAKE_LITERAL(5, 0)
 L_const7:
 	dq MAKE_LITERAL(3, 1)
-L_const9:
-	dq MAKE_LITERAL(3, 2)
-L_const11:
-	dq MAKE_LITERAL(3, 3)
 
 global_table:
+L_glob9:
+	 dq SOB_UNDEFINED 
+L_glob10:
+	 dq SOB_UNDEFINED 
+L_glob11:
+	 dq SOB_UNDEFINED 
+L_glob12:
+	 dq SOB_UNDEFINED 
 L_glob13:
 	 dq SOB_UNDEFINED 
 L_glob14:
@@ -122,12 +126,6 @@ L_glob55:
 	 dq SOB_UNDEFINED 
 L_glob56:
 	 dq SOB_UNDEFINED 
-L_glob57:
-	 dq SOB_UNDEFINED 
-L_glob58:
-	 dq SOB_UNDEFINED 
-L_glob59:
-	 dq SOB_UNDEFINED 
 
 global main
 section .text
@@ -160,7 +158,7 @@ mov rax, [malloc_pointer]
 my_malloc 16 
 MAKE_LITERAL_CLOSURE rax, L_const2, L_null 
 mov rax, [rax] 
-mov [L_glob39], rax 
+mov [L_glob34], rax 
 
 jmp L_make_boolean
 L_boolean: 
@@ -186,7 +184,7 @@ mov rax, [malloc_pointer]
 my_malloc 16 
 MAKE_LITERAL_CLOSURE rax, L_const2, L_boolean 
 mov rax, [rax] 
-mov [L_glob26], rax 
+mov [L_glob19], rax 
 
 jmp L_make_char
 L_char: 
@@ -212,7 +210,7 @@ mov rax, [malloc_pointer]
 my_malloc 16 
 MAKE_LITERAL_CLOSURE rax, L_const2, L_char 
 mov rax, [rax] 
-mov [L_glob30], rax 
+mov [L_glob23], rax 
 
 jmp L_make_integer
 L_integer: 
@@ -238,7 +236,7 @@ mov rax, [malloc_pointer]
 my_malloc 16 
 MAKE_LITERAL_CLOSURE rax, L_const2, L_integer 
 mov rax, [rax] 
-mov [L_glob14], rax 
+mov [L_glob26], rax 
 
 jmp L_make_pair
 L_pair: 
@@ -264,7 +262,7 @@ mov rax, [malloc_pointer]
 my_malloc 16 
 MAKE_LITERAL_CLOSURE rax, L_const2, L_pair 
 mov rax, [rax] 
-mov [L_glob41], rax 
+mov [L_glob37], rax 
 
 jmp L_make_procedure
 L_procedure: 
@@ -290,7 +288,7 @@ mov rax, [malloc_pointer]
 my_malloc 16 
 MAKE_LITERAL_CLOSURE rax, L_const2, L_procedure 
 mov rax, [rax] 
-mov [L_glob42], rax 
+mov [L_glob38], rax 
 
 jmp L_make_rational
 L_rational: 
@@ -316,7 +314,7 @@ mov rax, [malloc_pointer]
 my_malloc 16 
 MAKE_LITERAL_CLOSURE rax, L_const2, L_rational 
 mov rax, [rax] 
-mov [L_glob15], rax 
+mov [L_glob39], rax 
 
 jmp L_make_string
 L_string: 
@@ -342,7 +340,7 @@ mov rax, [malloc_pointer]
 my_malloc 16 
 MAKE_LITERAL_CLOSURE rax, L_const2, L_string 
 mov rax, [rax] 
-mov [L_glob50], rax 
+mov [L_glob47], rax 
 
 jmp L_make_symbol
 L_symbol: 
@@ -368,7 +366,7 @@ mov rax, [malloc_pointer]
 my_malloc 16 
 MAKE_LITERAL_CLOSURE rax, L_const2, L_symbol 
 mov rax, [rax] 
-mov [L_glob51], rax 
+mov [L_glob48], rax 
 
 jmp L_make_vector
 L_vector: 
@@ -394,7 +392,7 @@ mov rax, [malloc_pointer]
 my_malloc 16 
 MAKE_LITERAL_CLOSURE rax, L_const2, L_vector 
 mov rax, [rax] 
-mov [L_glob57], rax 
+mov [L_glob54], rax 
 
 jmp L_make_car 
 L_car: 
@@ -417,7 +415,7 @@ mov rax, [malloc_pointer]
 my_malloc 16 
 MAKE_LITERAL_CLOSURE rax, L_const2, L_car 
 mov rax, [rax] 
-mov [L_glob27], rax 
+mov [L_glob20], rax 
 
 jmp L_make_cdr 
 L_cdr: 
@@ -440,7 +438,7 @@ mov rax, [malloc_pointer]
 my_malloc 16 
 MAKE_LITERAL_CLOSURE rax, L_const2, L_cdr 
 mov rax, [rax] 
-mov [L_glob28], rax 
+mov [L_glob21], rax 
 
 jmp L_make_integer_to_char 
 L_integer_to_char: 
@@ -468,7 +466,7 @@ mov rax, [malloc_pointer]
 my_malloc 16 
 MAKE_LITERAL_CLOSURE rax, L_const2, L_integer_to_char 
 mov rax, [rax] 
-mov [L_glob33], rax 
+mov [L_glob27], rax 
 
 jmp L_make_char_to_integer 
 L_char_to_integer: 
@@ -496,7 +494,7 @@ mov rax, [malloc_pointer]
 my_malloc 16 
 MAKE_LITERAL_CLOSURE rax, L_const2, L_char_to_integer 
 mov rax, [rax] 
-mov [L_glob29], rax 
+mov [L_glob22], rax 
 
 jmp L_make_cons 
 L_cons: 
@@ -529,7 +527,7 @@ mov rax, [malloc_pointer]
 my_malloc 16 
 MAKE_LITERAL_CLOSURE rax, L_const2, L_cons 
 mov rax, [rax] 
-mov [L_glob31], rax 
+mov [L_glob24], rax 
 
 jmp L_make_zero 
 L_zero: 
@@ -555,7 +553,7 @@ mov rax, [malloc_pointer]
 my_malloc 16 
 MAKE_LITERAL_CLOSURE rax, L_const2, L_zero 
 mov rax, [rax] 
-mov [L_glob58], rax 
+mov [L_glob55], rax 
 
 jmp L_make_not 
 L_not: 
@@ -583,7 +581,7 @@ mov rax, [malloc_pointer]
 my_malloc 16 
 MAKE_LITERAL_CLOSURE rax, L_const2, L_not 
 mov rax, [rax] 
-mov [L_glob38], rax 
+mov [L_glob33], rax 
 
 jmp L_make_eq 
 L_eq: 
@@ -608,7 +606,7 @@ mov rax, [malloc_pointer]
 my_malloc 16 
 MAKE_LITERAL_CLOSURE rax, L_const2, L_eq 
 mov rax, [rax] 
-mov [L_glob37], rax 
+mov [L_glob32], rax 
 
 jmp L_make_string_len 
 L_string_len: 
@@ -636,7 +634,7 @@ mov rax, [malloc_pointer]
 my_malloc 16 
 MAKE_LITERAL_CLOSURE rax, L_const2, L_string_len 
 mov rax, [rax] 
-mov [L_glob46], rax 
+mov [L_glob43], rax 
 
 jmp L_make_string_ref 
 L_string_ref: 
@@ -672,7 +670,7 @@ mov rax, [malloc_pointer]
 my_malloc 16 
 MAKE_LITERAL_CLOSURE rax, L_const2, L_string_ref 
 mov rax, [rax] 
-mov [L_glob47], rax 
+mov [L_glob44], rax 
 
 jmp L_make_string_set 
 L_string_set: 
@@ -712,7 +710,7 @@ mov rax, [malloc_pointer]
 my_malloc 16 
 MAKE_LITERAL_CLOSURE rax, L_const2, L_string_set 
 mov rax, [rax] 
-mov [L_glob48], rax 
+mov [L_glob45], rax 
 
 jmp L_make_vector_len 
 L_vector_len: 
@@ -740,7 +738,7 @@ mov rax, [malloc_pointer]
 my_malloc 16 
 MAKE_LITERAL_CLOSURE rax, L_const2, L_vector_len 
 mov rax, [rax] 
-mov [L_glob54], rax 
+mov [L_glob51], rax 
 
 jmp L_make_vector_ref 
 L_vector_ref: 
@@ -771,7 +769,7 @@ mov rax, [malloc_pointer]
 my_malloc 16 
 MAKE_LITERAL_CLOSURE rax, L_const2, L_vector_ref 
 mov rax, [rax] 
-mov [L_glob55], rax 
+mov [L_glob52], rax 
 
 jmp L_make_vector_set 
 L_vector_set: 
@@ -806,7 +804,7 @@ mov rax, [malloc_pointer]
 my_malloc 16 
 MAKE_LITERAL_CLOSURE rax, L_const2, L_vector_set 
 mov rax, [rax] 
-mov [L_glob56], rax 
+mov [L_glob53], rax 
 
 jmp L_make_set_car 
 L_set_car: 
@@ -833,7 +831,7 @@ mov rax, [malloc_pointer]
 my_malloc 16 
 MAKE_LITERAL_CLOSURE rax, L_const2, L_set_car 
 mov rax, [rax] 
-mov [L_glob44], rax 
+mov [L_glob41], rax 
 
 jmp L_make_set_cdr 
 L_set_cdr: 
@@ -860,7 +858,7 @@ mov rax, [malloc_pointer]
 my_malloc 16 
 MAKE_LITERAL_CLOSURE rax, L_const2, L_set_cdr 
 mov rax, [rax] 
-mov [L_glob45], rax 
+mov [L_glob42], rax 
 
 jmp L_make_remainder 
 L_remainder: 
@@ -911,7 +909,7 @@ mov rax, [malloc_pointer]
 my_malloc 16 
 MAKE_LITERAL_CLOSURE rax, L_const2, L_remainder 
 mov rax, [rax] 
-mov [L_glob43], rax 
+mov [L_glob40], rax 
 
 jmp L_make_smaller_then_bin 
 L_smaller_then_bin: 
@@ -993,7 +991,7 @@ mov rax, [malloc_pointer]
 my_malloc 16 
 MAKE_LITERAL_CLOSURE rax, L_const2, L_smaller_then_bin 
 mov rax, [rax] 
-mov [L_glob19], rax 
+mov [L_glob12], rax 
 
 jmp L_make_bigger_then_bin 
 L_bigger_then_bin: 
@@ -1075,7 +1073,7 @@ mov rax, [malloc_pointer]
 my_malloc 16 
 MAKE_LITERAL_CLOSURE rax, L_const2, L_bigger_then_bin 
 mov rax, [rax] 
-mov [L_glob21], rax 
+mov [L_glob14], rax 
 
 jmp L_make_equals_bin 
 L_equals_bin: 
@@ -1153,7 +1151,7 @@ mov rax, [malloc_pointer]
 my_malloc 16 
 MAKE_LITERAL_CLOSURE rax, L_const2, L_equals_bin 
 mov rax, [rax] 
-mov [L_glob20], rax 
+mov [L_glob13], rax 
 
 jmp L_make_plus_bin 
 L_plus_bin: 
@@ -1161,6 +1159,7 @@ push rbp
 mov rbp, rsp 
 mov rbx, [rbp + 8*3] 
 cmp rbx , 2 
+bla: 
 jne L_incorrect_num_of_args 
 mov rax, [rbp + 8*4] 
 mov rax, [rax] 
@@ -1260,7 +1259,7 @@ mov rax, [malloc_pointer]
 my_malloc 16 
 MAKE_LITERAL_CLOSURE rax, L_const2, L_plus_bin 
 mov rax, [rax] 
-mov [L_glob22], rax 
+mov [L_glob9], rax 
 
 jmp L_make_minus_bin 
 L_minus_bin: 
@@ -1368,7 +1367,7 @@ mov rax, [malloc_pointer]
 my_malloc 16 
 MAKE_LITERAL_CLOSURE rax, L_const2, L_minus_bin 
 mov rax, [rax] 
-mov [L_glob25], rax 
+mov [L_glob18], rax 
 
 jmp L_make_mul_bin 
 L_mul_bin: 
@@ -1471,7 +1470,7 @@ mov rax, [malloc_pointer]
 my_malloc 16 
 MAKE_LITERAL_CLOSURE rax, L_const2, L_mul_bin 
 mov rax, [rax] 
-mov [L_glob24], rax 
+mov [L_glob17], rax 
 
 jmp L_make_div_bin 
 L_div_bin: 
@@ -1570,7 +1569,7 @@ mov rax, [malloc_pointer]
 my_malloc 16 
 MAKE_LITERAL_CLOSURE rax, L_const2, L_div_bin 
 mov rax, [rax] 
-mov [L_glob23], rax 
+mov [L_glob16], rax 
 
 jmp L_make_denominator 
 L_denominator: 
@@ -1599,7 +1598,7 @@ mov rax, [malloc_pointer]
 my_malloc 16 
 MAKE_LITERAL_CLOSURE rax, L_const2, L_denominator 
 mov rax, [rax] 
-mov [L_glob32], rax 
+mov [L_glob25], rax 
 
 jmp L_make_numerator 
 L_numerator: 
@@ -1628,7 +1627,7 @@ mov rax, [malloc_pointer]
 my_malloc 16 
 MAKE_LITERAL_CLOSURE rax, L_const2, L_numerator 
 mov rax, [rax] 
-mov [L_glob40], rax 
+mov [L_glob36], rax 
 
 mov rax, [malloc_pointer] 
 my_malloc 16 
@@ -1650,7 +1649,7 @@ push L_const2
 mov rax, qword [rbp + (4 + 0) * 8] 
 push rax 
 push 1
-mov rax, L_glob14 
+mov rax, L_glob26 
 mov rbx, [rax] 
 TYPE rbx 
 cmp rbx, T_CLOSURE 
@@ -1670,17 +1669,16 @@ L_remove_nils2:
 cmp qword [rsp], L_const2 
 jne .cont 
 add rsp, 8 
-jmp .remove_from_stack 
 .cont: 
 
 mov r13, [rax] 
 cmp r13, [L_const5]
 jne L_or_done1
-push L_const2 
+push L_const2              ;push '() to stack 
 mov rax, qword [rbp + (4 + 0) * 8] 
 push rax 
 push 1
-mov rax, L_glob15 
+mov rax, L_glob39 
 mov rbx, [rax] 
 TYPE rbx 
 cmp rbx, T_CLOSURE 
@@ -1692,7 +1690,7 @@ mov rdi, [rbp+8]
 push rdi 
 mov r8, rbp 
 mov r9, r8 
-add r9, 8*5 
+add r9, 8*4 
 sub r8 , 8 
 sub r9 , 8 
 mov rcx, [r8] 
@@ -1722,7 +1720,7 @@ leave
 ret 
 END_L_lambda_code1: 
 mov rax, [rax] 
-mov [L_glob13], rax 
+mov [L_glob35], rax 
 mov rax, L_const1 
 push qword [rax]
 call write_sob_if_not_void
@@ -1762,18 +1760,18 @@ mov rax, L_const2 ;Initialize rax with nil
 
 ;If at this point r13 is 0, it means that there are no args in the list so we do nothing! 
 cmp r13, 0 
-je L_END_for_lambda_opt 
+je L_lambda_opt_end_code1 
 push qword L_const2   ; push nil to as first argument 
 push qword [r12]      ; push the first element of the iteration 
 push 2            ; push num of args 
 push L_const2     ; push empty env (only to keep the form) 
 call L_cons       ; the return value will be stored in rax 
 add rsp, 8*4 
-L_start_for_lambda_opt: 
+L_lambda_opt_start_code1: 
    sub r12, 8 
    sub r13, 1 
    cmp r13, 0 
-   je L_END_for_lambda_opt 
+   je L_lambda_opt_end_code1 
    
    push rax          ; push the last created pair to be the cdr 
    push qword [r12]      ; push next arg to be the car of the pair 
@@ -1781,41 +1779,160 @@ L_start_for_lambda_opt:
    push L_const2     ; push empty env (only to keep the form) 
    call L_cons       ; the return value will be stored in rax 
    add rsp, 8*4 
-   jmp L_start_for_lambda_opt 
-L_END_for_lambda_opt: 
+   jmp L_lambda_opt_start_code1 
+L_lambda_opt_end_code1: 
 ;At this point, the whole list is stored in rax 
 mov qword [rbp + 8*3], 1 
 mov r12, 3 
 mov qword [r11], rax ; copy the args list to the bottom of the new frame 
-L_start_rearrange_lambda_opt: 
+.L_start_rearrange_lambda_opt: 
    sub r11, 8 
    mov rsi, [rbp + 8*r12] 
    mov qword [r11], rsi 
    
    sub r12, 1 
    cmp r12, 0 
-   jge L_start_rearrange_lambda_opt 
+   jge .L_start_rearrange_lambda_opt 
 mov rsp, r11 ;update rsp to point to the top of the rearranged frame 
 mov rbp, rsp 
+push L_const2              ;push '() to stack 
+push L_const2 
+push L_const2 
 mov rax, qword [rbp + (4 + 0) * 8] 
+push rax 
+push 1
+mov rax, L_glob21 
+mov rbx, [rax] 
+TYPE rbx 
+cmp rbx, T_CLOSURE 
+jne L_error 
+mov rbx, [rax] 
+CLOSURE_ENV rbx 
+push rbx 
+mov rax, [rax] 
+CLOSURE_CODE rax 
+call rax 
+mov rbx, qword [rsp + 8] 
+add rbx, 2 
+shl rbx, 3 
+add rsp, rbx 
+L_remove_nils5: 
+.remove_from_stack: 
+cmp qword [rsp], L_const2 
+jne .cont 
+add rsp, 8 
+.cont: 
+
+push rax 
+push 1
+mov rax, L_glob20 
+mov rbx, [rax] 
+TYPE rbx 
+cmp rbx, T_CLOSURE 
+jne L_error 
+mov rbx, [rax] 
+CLOSURE_ENV rbx 
+push rbx 
+mov rax, [rax] 
+CLOSURE_CODE rax 
+call rax 
+mov rbx, qword [rsp + 8] 
+add rbx, 2 
+shl rbx, 3 
+add rsp, rbx 
+L_remove_nils4: 
+.remove_from_stack: 
+cmp qword [rsp], L_const2 
+jne .cont 
+add rsp, 8 
+.cont: 
+
+push rax 
+push L_const2 
+mov rax, qword [rbp + (4 + 0) * 8] 
+push rax 
+push 1
+mov rax, L_glob20 
+mov rbx, [rax] 
+TYPE rbx 
+cmp rbx, T_CLOSURE 
+jne L_error 
+mov rbx, [rax] 
+CLOSURE_ENV rbx 
+push rbx 
+mov rax, [rax] 
+CLOSURE_CODE rax 
+call rax 
+mov rbx, qword [rsp + 8] 
+add rbx, 2 
+shl rbx, 3 
+add rsp, rbx 
+L_remove_nils3: 
+.remove_from_stack: 
+cmp qword [rsp], L_const2 
+jne .cont 
+add rsp, 8 
+.cont: 
+
+push rax 
+push 2
+mov rax, L_glob9 
+mov rbx, [rax] 
+TYPE rbx 
+cmp rbx, T_CLOSURE 
+jne L_error 
+mov rbx, [rax] 
+CLOSURE_ENV rbx 
+push rbx 
+mov rdi, [rbp+8] 
+push rdi 
+mov r8, rbp 
+mov r9, r8 
+add r9, 8*5 
+sub r8 , 8 
+sub r9 , 8 
+mov rcx, [r8] 
+mov [r9], rcx 
+sub r8 , 8 
+sub r9 , 8 
+mov rcx, [r8] 
+mov [r9], rcx 
+sub r8 , 8 
+sub r9 , 8 
+mov rcx, [r8] 
+mov [r9], rcx 
+sub r8 , 8 
+sub r9 , 8 
+mov rcx, [r8] 
+mov [r9], rcx 
+sub r8 , 8 
+sub r9 , 8 
+mov rcx, [r8] 
+mov [r9], rcx 
+sub r8 , 8 
+sub r9 , 8 
+mov rcx, [r8] 
+mov [r9], rcx 
+mov rsp, r9 
+mov rax, [rax] 
+CLOSURE_CODE rax 
+jmp rax 
 leave 
 ret 
 END_L_lambda_code2: 
 mov rax, [rax] 
-mov [L_glob16], rax 
+mov [L_glob15], rax 
 mov rax, L_const1 
 push qword [rax]
 call write_sob_if_not_void
 add rsp, 1*8
 push L_const2 
-mov rax, L_const11 
-push rax 
-mov rax, L_const9 
+mov rax, L_const7 
 push rax 
 mov rax, L_const7 
 push rax 
-push 3
-mov rax, L_glob16 
+push 2
+mov rax, L_glob15 
 mov rbx, [rax] 
 TYPE rbx 
 cmp rbx, T_CLOSURE 
@@ -1835,7 +1952,6 @@ L_remove_nils1:
 cmp qword [rsp], L_const2 
 jne .cont 
 add rsp, 8 
-jmp .remove_from_stack 
 .cont: 
 
 push qword [rax]

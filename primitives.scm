@@ -1,5 +1,5 @@
 (define number? (lambda (x) (or (integer? x) (rational? x))))
-
+;; 
 (define list
 	(lambda x x))
 ;; 

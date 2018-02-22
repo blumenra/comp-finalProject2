@@ -227,14 +227,15 @@
 (define primitive-funcs 
     (lambda (lst)
         (append 
-            lst 
-            '(append apply < = > + / * - boolean? car cdr char->integer 
+            
+            '(ass-plus-bin 
+            append apply < = > + / * - boolean? car cdr char->integer 
             char? cons denominator integer? integer->char list make-string 
             make-vector map eq? not null? number? numerator pair? procedure? rational? 
             remainder set-car! set-cdr! string-length string-ref string-set! 
             string->symbol string? symbol? symbol->string vector vector-length 
-            vector-ref vector-set! vector? zero? our_gcd)))) 
-            
+            vector-ref vector-set! vector? zero? our_gcd)
+            lst ))) 
 
 (define initialize-tables-to-asm
     (lambda ()
@@ -491,17 +492,17 @@
                 (set! consts-table const-table)
                 (set! global-var-table (add-to-global-var-table (remove-dups (primitive-funcs (extract-fvars lst-sexp))) '()))
                 
-                ;(display `(lst-sexp: ,lst-sexp))
+                (display `(lst-sexp: ,lst-sexp))
 		;		(code-gen (car lst-sexp))
-                ;(newline)
+                (newline)
                 ;(display `(constlist: ,consts)) 
                 ;(newline)
                 ;(display `(const-table: ,consts-table))
                 ;(newline)
                 ;(initialize-consts-table-to-asm)
                 ;(newline)
-                ;(display `(global-table: ,global-var-table))
-				
+                (display `(global-table: ,global-var-table))
+		(newline)		
                 (string->file 
                      trg-file 
                      (string-append 
@@ -530,7 +531,13 @@
 (define gen-or-done-lable (make-gen-or-done-lable)) 
 
 (define make-gen-lambda-lable (make-lable-count "L_lambda_code"))
-(define gen-lambda-lable (make-gen-lambda-lable)) 
+(define gen-lambda-lable (make-gen-lambda-lable))
+
+(define make-gen-lambda-opt-start-lable (make-lable-count "L_lambda_opt_start_code"))
+(define gen-lambda-opt-start-lable (make-gen-lambda-opt-start-lable))
+
+(define make-gen-lambda-opt-end-lable (make-lable-count "L_lambda_opt_end_code"))
+(define gen-lambda-opt-end-lable (make-gen-lambda-opt-end-lable))
 
 (define make-gen-remove-nils-labels (make-lable-count "L_remove_nils"))
 (define gen-remove-nils-lable (make-gen-remove-nils-labels)) 
@@ -672,7 +679,7 @@
             (num-of-params (length params))
             (proc (cadr exp)))
             (string-append
-                "push L_const2 \n" ;push '() to stack
+                "push L_const2              ;push '() to stack \n" 
                 (params-code-gen params env) ;push evaluated params reversely to stack
                 "push " (number->string num-of-params) "\n"
                 (code-gen proc env)
@@ -853,39 +860,41 @@
 
 (define create_list_from_lambda_opt_params
     (lambda (i end)
-        (string-append
-            "mov rax, L_const2 ;Initialize rax with nil \n\n"
-            ";If at this point " end " is 0, it means that there are no args in the list so we do nothing! \n"
-            "cmp " end ", 0 \n"
-            "je L_END_for_lambda_opt \n"
-                        
-           
-            "push qword L_const2   ; push nil to as first argument \n"
-            "push qword [" i "]      ; push the first element of the iteration \n"
-            "push 2            ; push num of args \n"
-            "push L_const2     ; push empty env (only to keep the form) \n"
-            "call L_cons       ; the return value will be stored in rax \n"
-            "add rsp, 8*4 \n"
+        (let ((label-start (gen-lambda-opt-start-lable))
+              (label-end (gen-lambda-opt-end-lable)))
+            (string-append
+                "mov rax, L_const2 ;Initialize rax with nil \n\n"
+                ";If at this point " end " is 0, it means that there are no args in the list so we do nothing! \n"
+                "cmp " end ", 0 \n"
+                "je " label-end " \n"
+                            
             
-        
-            "L_start_for_lambda_opt: \n"
-            "   sub " i ", 8 \n"
-            "   sub " end ", 1 \n"
-            "   cmp " end ", 0 \n"
-            "   je L_END_for_lambda_opt \n"
-            "   \n"
-            "   push rax          ; push the last created pair to be the cdr \n"
-            "   push qword [" i "]      ; push next arg to be the car of the pair \n"
-            "   push 2            ; push num of args (car and cdr) \n"
-            "   push L_const2     ; push empty env (only to keep the form) \n"
-            "   call L_cons       ; the return value will be stored in rax \n"
-            "   add rsp, 8*4 \n"
-            "   jmp L_start_for_lambda_opt \n"
+                "push qword L_const2   ; push nil to as first argument \n"
+                "push qword [" i "]      ; push the first element of the iteration \n"
+                "push 2            ; push num of args \n"
+                "push L_const2     ; push empty env (only to keep the form) \n"
+                "call L_cons       ; the return value will be stored in rax \n"
+                "add rsp, 8*4 \n"
+                
             
-            "L_END_for_lambda_opt: \n"
-            ";At this point, the whole list is stored in rax \n"
+                label-start ": \n"
+                "   sub " i ", 8 \n"
+                "   sub " end ", 1 \n"
+                "   cmp " end ", 0 \n"
+                "   je " label-end " \n"
+                "   \n"
+                "   push rax          ; push the last created pair to be the cdr \n"
+                "   push qword [" i "]      ; push next arg to be the car of the pair \n"
+                "   push 2            ; push num of args (car and cdr) \n"
+                "   push L_const2     ; push empty env (only to keep the form) \n"
+                "   call L_cons       ; the return value will be stored in rax \n"
+                "   add rsp, 8*4 \n"
+                "   jmp " label-start " \n"
+                
+                label-end ": \n"
+                ";At this point, the whole list is stored in rax \n"
             
-        )))
+        ))))
 
 ;start = pointer to the start of the new frame
 (define rearrange_stack_lambda_opt
@@ -894,7 +903,7 @@
 					
             "mov qword [" start "], " lst " ; copy the args list to the bottom of the new frame \n"
 			
-            "L_start_rearrange_lambda_opt: \n"
+            ".L_start_rearrange_lambda_opt: \n"
             "   sub " start ", 8 \n"
             "   mov rsi, [rbp + 8*" end "] \n"
             "   mov qword [" start "], rsi \n"
@@ -902,7 +911,7 @@
             "   \n"
             "   sub " end ", 1 \n"
             "   cmp " end ", 0 \n"
-            "   jge L_start_rearrange_lambda_opt \n"
+            "   jge .L_start_rearrange_lambda_opt \n"
             "mov rsp, " start " ;update rsp to point to the top of the rearranged frame \n"
             "mov rbp, rsp \n"
         )))
@@ -2055,7 +2064,7 @@
 (define ass-plus-bin
     (lambda ()      
         (let* 
-            ((address (find-address '+ global-var-table)))
+            ((address (find-address 'ass-plus-bin global-var-table)))
             (string-append 
                 "jmp L_make_plus_bin \n" 
                 "L_plus_bin: \n"
@@ -2063,6 +2072,7 @@
                 "mov rbp, rsp \n"
                 "mov rbx, [rbp + 8*3] \n"
                 "cmp rbx , 2 \n"
+                "bla: \n"
                 "jne L_incorrect_num_of_args \n"
                 "mov rax, [rbp + 8*4] \n"
                 "mov rax, [rax] \n"
