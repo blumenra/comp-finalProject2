@@ -301,9 +301,15 @@
                             (string-append 
                                 "\t" "dq MAKE_LITERAL_FRACTION(" label-car ", " label-cdr ")\n")))
                             
-                    ((equal? type T_STRING) 
-                        (string-append 
-                            "\t" "MAKE_LITERAL_STRING " (split-lst value ", " number->string) "\n"))
+                    ((equal? type T_STRING)
+                        (let ((str_elements (split-lst value ", " number->string)))
+                            (string-append
+                                (if (equal? str_elements "")
+                                    "\t MAKE_LITERAL_STRING0 "
+                                    (string-append "\t" "MAKE_LITERAL_STRING " str_elements))
+                                
+                                "\n")))
+
                     ((equal? type T_PAIR)
                         (let 
                             ((label-car (string-append "L_const" (number->string (car value))))

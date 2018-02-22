@@ -256,6 +256,14 @@ pop rax
 	%%LstrEnd:
 %endmacro
 
+%macro MAKE_LITERAL_STRING0 0
+	dq (((((%%LstrEnd - %%Lstr) << ((WORD_SIZE - TYPE_BITS) >> 1)) | (%%Lstr - start_of_data)) << TYPE_BITS) | T_STRING)
+	%%Lstr:
+
+	%%LstrEnd:
+%endmacro
+
+
 %macro STRING_LENGTH 1
 	DATA_UPPER %1
 %endmacro
