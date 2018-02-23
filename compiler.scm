@@ -658,16 +658,21 @@
 
                 
 (define override-frame
-    (lambda (index)
-            (if (zero? index)
-                ""
-                (string-append
-                    
-                    "mov rcx, [r8] \n"
-                    "mov [r9], rcx \n"
-                    "sub r8 , 8 \n"
-                    "sub r9 , 8 \n"
-                    (override-frame (- index 1))))))
+    (lambda (index-reg)
+        (string-append
+            
+            ".loop: \n"
+                "cmp " index-reg ", 0 \n"
+                "je .cont \n"
+                "mov rcx, [r8] \n"
+                "mov [r9], rcx \n"
+                "sub r8 , 8 \n"
+                "sub r9 , 8 \n"
+                "dec " index-reg " \n"
+                "jmp .loop \n"
+                
+                ".cont: \n"
+        )))
                     
                     
 (define code-gen-tc-applic
@@ -692,15 +697,26 @@
                 "mov rdi, [rbp+8] \n"
                 "push rdi \n"
                 
+                ";bla3 \n"
+                " \n"
+                "mov r14, [rsp +8*2] \n"
+                "mov r15, [rbp +8*3] \n"
                 "mov r8, rbp \n"
-                "sub r8 , 8 \n"
                 
+                ;;;;;
                 "mov r9, r8 \n"
-                "add r9, 8*" (number->string (+ 3 num-of-params)) " \n"
+                "sub r8 , 8 \n"
+                "add r15, 3 \n" ;(number->string (+ 2 num-of-params))
+                "shl r15, 3 \n"
+                "add r9, r15 \n"
                 
-                (override-frame (+ 3 num-of-params)) ; copy the following from new frame to old frame: null, num_of_args, env (4), n-args (num-of-params)
+                
+                "add r14, 3 \n"
+;;                 (+ 3 num-of-params)
+                (override-frame "r14") ; copy the following from new frame to old frame: null, num_of_args, env (4), n-args (num-of-params)
                 "add r9 , 8 \n"
-                
+                ;;;;;
+       
                 "mov rsp, r9 \n"
                 "mov rax, [rax] \n"
                 "CLOSURE_CODE rax \n"
