@@ -228,7 +228,8 @@
     (lambda (lst)
         (append 
             lst
-            '(ass-plus-bin 
+            '(ass-plus-bin ass-minus-bin ass-smaller-then-bin ass-bigger-then-bin ass-equals-bin
+            ass-div-bin ass-mul-bin
             append apply < = > + / * - boolean? car cdr char->integer 
             char? cons denominator integer? integer->char list make-string 
             make-vector map eq? not null? number? numerator pair? procedure? rational? 
@@ -418,6 +419,12 @@
             (ass-denominator)
             (ass-numerator)
             (ass-plus)
+            (ass-minus)
+            (ass-smaller)
+            (ass-bigger)
+            (ass-equal)
+            (ass-div)
+            (ass-mul)
             
                  
         )))
@@ -492,17 +499,17 @@
                 (set! consts-table const-table)
                 (set! global-var-table (add-to-global-var-table (remove-dups (primitive-funcs (extract-fvars lst-sexp))) '()))
                 
-                (display `(lst-sexp: ,lst-sexp))
+                ;(display `(lst-sexp: ,lst-sexp))
 		;		(code-gen (car lst-sexp))
-                (newline)
+                ;(newline)
                 ;(display `(constlist: ,consts)) 
                 ;(newline)
                 ;(display `(const-table: ,consts-table))
                 ;(newline)
                 ;(initialize-consts-table-to-asm)
                 ;(newline)
-                (display `(global-table: ,global-var-table))
-		(newline)		
+                ;(display `(global-table: ,global-var-table))
+		;(newline)		
                 (string->file 
                      trg-file 
                      (string-append 
@@ -888,6 +895,9 @@
                 "je " label-end " \n"
                             
                 
+                "push " i " \n"
+                "push " end " \n"
+                
                 "push qword L_const2   ; push nil to as first argument \n"
                 "push qword [" i "]      ; push the first element of the iteration \n"
                 "push 3            ; push num of args \n"
@@ -895,6 +905,8 @@
                 "call L_cons       ; the return value will be stored in rax \n"
                 "add rsp, 8*4 \n"
 
+                "pop " end " \n"
+                "pop " i " \n"
             
                 label-start ": \n"
                 "   sub " i ", 8 \n"
@@ -902,12 +914,19 @@
                 "   cmp " end ", 0 \n"
                 "   je " label-end " \n"
                 "   \n"
+                
+                "   push " i " \n"
+                "   push " end " \n"
+                
                 "   push rax          ; push the last created pair to be the cdr \n"
                 "   push qword [" i "]      ; push next arg to be the car of the pair \n"
                 "   push 3            ; push num of args (car and cdr) \n"
                 "   push L_const2     ; push empty env (only to keep the form) \n"
                 "   call L_cons       ; the return value will be stored in rax \n"
                 "   add rsp, 8*4 \n"
+                
+                "   pop " end " \n"
+                "   pop " i " \n"
                 "   jmp " label-start " \n"
                 
                 label-end ": \n"
@@ -1747,10 +1766,84 @@
                 "mov rax, [rax] \n"
                 "mov [L_glob" (number->string address) "], rax \n\n" ))))
                 
-(define ass-smaller-then-bin
+(define ass-smaller
     (lambda ()      
         (let* 
             ((address (find-address '< global-var-table)))
+            (string-append 
+                "jmp L_make_smaller \n" 
+                "L_smaller: \n"
+                "push rbp \n"
+                "mov rbp, rsp \n"
+                
+                "mov r12, 0 \n"
+                "MAKE_MALLOC_INTEGER r12 \n"
+                "mov r15, rax \n" ;; accumulator
+                
+                "NUM_OF_ARGS rcx \n"
+                
+                ;; IF num of args is 0:
+                "cmp rcx, 0 \n"
+                "je L_incorrect_num_of_args \n"
+                
+                ;; IF num of args is 1:
+                "cmp rcx, 1 \n"
+                "jne .L_more_than_2_args \n"
+                "mov rax, L_const3 \n"
+                "jmp .L_smaller_done \n"
+                
+                ;; If num of args > 1:
+                ".L_more_than_2_args: \n"
+                "mov r10, 0 \n"
+                "dec rcx \n"
+                
+                ;; rcx - limit
+                ;; r8  - current arg
+                ;; r10 - interator. 0 <= r10 < rcx
+
+                ".while: \n"
+
+                "TAKE_ARG r15, r10 \n"
+                "inc r10 \n"
+                "TAKE_ARG r8, r10 \n"
+                
+                "push rcx \n"
+                "push r10 \n"
+
+                "push r8 \n"
+                "push r15 \n"
+                "push 3 \n"
+                "push L_const2 \n"
+                "call L_smaller_then_bin \n" ;; r15 < r8
+                "add rsp, 4*8 \n"
+                
+                "pop r10 \n"
+                "pop rcx \n"
+                
+                "cmp rax, L_const5           ;;compare result with #f \n" 
+                "je .L_smaller_done \n"
+             
+                "cmp r10, rcx \n"
+                "je .L_smaller_done \n"
+                
+                "jmp .while \n"
+    
+                ".L_smaller_done: \n"
+                
+                "leave \n"
+                "ret \n"
+                
+                "L_make_smaller: \n"
+                "mov rax, [malloc_pointer] \n"
+                "my_malloc 16 \n"
+                "MAKE_LITERAL_CLOSURE rax, L_const2, L_smaller \n"
+                "mov rax, [rax] \n"
+                "mov [L_glob" (number->string address) "], rax \n\n" )))) 
+                
+(define ass-smaller-then-bin
+    (lambda ()      
+        (let* 
+            ((address (find-address 'ass-smaller-then-bin global-var-table)))
             (string-append 
                 "jmp L_make_smaller_then_bin \n" 
                 "L_smaller_then_bin: \n"
@@ -1847,11 +1940,86 @@
                 "MAKE_LITERAL_CLOSURE rax, L_const2, L_smaller_then_bin \n"
                 "mov rax, [rax] \n"
                 "mov [L_glob" (number->string address) "], rax \n\n" ))))
+
+                
+(define ass-bigger
+    (lambda ()      
+        (let* 
+            ((address (find-address '> global-var-table)))
+            (string-append 
+                "jmp L_make_bigger \n" 
+                "L_bigger: \n"
+                "push rbp \n"
+                "mov rbp, rsp \n"
+                
+                "mov r12, 0 \n"
+                "MAKE_MALLOC_INTEGER r12 \n"
+                "mov r15, rax \n" 
+                
+                "NUM_OF_ARGS rcx \n"
+                
+                ;; IF num of args is 0:
+                "cmp rcx, 0 \n"
+                "je L_incorrect_num_of_args \n"
+                
+                ;; IF num of args is 1:
+                "cmp rcx, 1 \n"
+                "jne .L_more_than_2_args \n"
+                "mov rax, L_const3 \n"
+                "jmp .L_bigger_done \n"
+                
+                ;; If num of args > 1:
+                ".L_more_than_2_args: \n"
+                "mov r10, 0 \n"
+                "dec rcx \n"
+                
+                ;; rcx - limit
+                ;; r8  - current arg
+                ;; r10 - interator. 0 <= r10 < rcx
+
+                ".while: \n"
+
+                "TAKE_ARG r15, r10 \n"
+                "inc r10 \n"
+                "TAKE_ARG r8, r10 \n"
+                
+                "push rcx \n"
+                "push r10 \n"
+
+                "push r8 \n"
+                "push r15 \n"
+                "push 3 \n"
+                "push L_const2 \n"
+                "call L_bigger_then_bin \n" ;; r15 > r8
+                "add rsp, 4*8 \n"
+                
+                "pop r10 \n"
+                "pop rcx \n"
+                
+                "cmp rax, L_const5           ;;compare result with #f \n" 
+                "je .L_bigger_done \n"
+             
+                "cmp r10, rcx \n"
+                "je .L_bigger_done \n"
+                
+                "jmp .while \n"
+    
+                ".L_bigger_done: \n"
+                
+                "leave \n"
+                "ret \n"
+                
+                "L_make_bigger: \n"
+                "mov rax, [malloc_pointer] \n"
+                "my_malloc 16 \n"
+                "MAKE_LITERAL_CLOSURE rax, L_const2, L_bigger \n"
+                "mov rax, [rax] \n"
+                "mov [L_glob" (number->string address) "], rax \n\n" )))) 
                 
 (define ass-bigger-then-bin
     (lambda ()      
         (let* 
-            ((address (find-address '> global-var-table)))
+            ((address (find-address 'ass-bigger-then-bin global-var-table)))
             (string-append 
                 "jmp L_make_bigger_then_bin \n" 
                 "L_bigger_then_bin: \n"
@@ -1950,10 +2118,87 @@
                 "mov rax, [rax] \n"
                 "mov [L_glob" (number->string address) "], rax \n\n" ))))
                 
+                
+(define ass-equal
+    (lambda ()      
+        (let* 
+            ((address (find-address '= global-var-table))
+            (start_label "L_equal")
+            (make_label (string-append "L_make_" start_label))
+            (end_label (string-append "." start_label "_done")))
+            (string-append 
+                "jmp " make_label " \n" 
+                start_label ": \n"
+                "push rbp \n"
+                "mov rbp, rsp \n"
+                
+                "mov r12, 0 \n"
+                "MAKE_MALLOC_INTEGER r12 \n"
+                "mov r15, rax \n" 
+                
+                "NUM_OF_ARGS rcx \n"
+                
+                ;; IF num of args is 0:
+                "cmp rcx, 0 \n"
+                "je L_incorrect_num_of_args \n"
+                
+                ;; IF num of args is 1:
+                "cmp rcx, 1 \n"
+                "jne .L_more_than_2_args \n"
+                "mov rax, L_const3 \n"
+                "jmp " end_label " \n"
+                
+                ;; If num of args > 1:
+                ".L_more_than_2_args: \n"
+                "mov r10, 0 \n"
+                "dec rcx \n"
+                
+                ;; rcx - limit
+                ;; r8  - current arg
+                ;; r10 - interator. 0 <= r10 < rcx
+
+                ".while: \n"
+
+                "TAKE_ARG r15, r10 \n"
+                "inc r10 \n"
+                "TAKE_ARG r8, r10 \n"
+                
+                "push rcx \n"
+                "push r10 \n"
+
+                "push r8 \n"
+                "push r15 \n"
+                "push 3 \n"
+                "push L_const2 \n"
+                "call L_equals_bin \n" ;; r15 = r8
+                "add rsp, 4*8 \n"
+                
+                "pop r10 \n"
+                "pop rcx \n"
+                
+                "cmp rax, L_const5           ;;compare result with #f \n" 
+                "je " end_label " \n"
+             
+                "cmp r10, rcx \n"
+                "je " end_label " \n"
+                
+                "jmp .while \n"
+    
+                end_label ": \n"
+                "leave \n"
+                "ret \n"
+                
+                make_label ": \n"
+                "mov rax, [malloc_pointer] \n"
+                "my_malloc 16 \n"
+                "MAKE_LITERAL_CLOSURE rax, L_const2, " start_label " \n"
+                "mov rax, [rax] \n"
+                "mov [L_glob" (number->string address) "], rax \n\n" )))) 
+                
 (define ass-equals-bin
     (lambda ()      
         (let* 
-            ((address (find-address '= global-var-table)))
+            ((address (find-address 'ass-equals-bin global-var-table)))
             (string-append 
                 "jmp L_make_equals_bin \n" 
                 "L_equals_bin: \n"
@@ -2263,11 +2508,105 @@
                 "mov rax, [rax] \n"
                 "mov [L_glob" (number->string address) "], rax \n\n" ))))
                 
+
+(define ass-minus
+    (lambda ()      
+        (let* 
+            ((address (find-address '- global-var-table)))
+            (string-append 
+                "jmp L_make_minus \n" 
+                "L_minus: \n"
+                "push rbp \n"
+                "mov rbp, rsp \n"
+                
+                "mov r12, 0 \n"
+                "MAKE_MALLOC_INTEGER r12 \n"
+                "mov r15, rax \n" ;; accumulator
+                
+                "NUM_OF_ARGS rcx \n"
+                
+                ;; IF num of args is 0:
+                "cmp rcx, 0 \n"
+                "je L_incorrect_num_of_args \n"
+                
+                ;; IF num of args is 1:
+                "cmp rcx, 1 \n"
+                "jne .L_more_than_2_args \n"
+                
+                "mov r10, 0 \n"
+                                            
+                "TAKE_ARG r8, r10 \n" ;; r8 = first arg
+                
+                "push rcx \n"
+                "push r10 \n"
+
+                
+                "push r8 \n"
+                "push r15 \n"
+                "push 3 \n"
+                "push L_const2 \n"
+                "call L_minus_bin \n" ;; r15 - r8
+                "add rsp, 4*8 \n"
+                
+                "pop r10 \n"
+                "pop rcx \n"
+                "jmp .L_minus_done \n"
+
+                ;; If num of args > 1:
+                ".L_more_than_2_args: \n"
+                "mov r10, 0 \n"
+                                            
+                ;; rcx - limit
+                ;; r8  - current arg
+                ;; r10 - interator. 0 <= r10 < rcx
+                
+                "TAKE_ARG r15, r10 \n"
+                "inc r10 \n"
+                
+                ".while: \n"
+
+                "TAKE_ARG r8, r10 \n"
+                                
+                "push rcx \n"
+                "push r10 \n"
+
+                
+                "push r8 \n"
+                "push r15 \n"
+                "push 3 \n"
+                "push L_const2 \n"
+                "call L_minus_bin \n" ;; r15 - r8
+                "add rsp, 4*8 \n"
+                
+                "pop r10 \n"
+                "pop rcx \n"
+                
+                
+                "mov r15, rax           ;;save in r15 the sum result \n" 
+                
+                "inc r10 \n"
+                "cmp r10, rcx \n"
+                "je .L_minus_done \n"
+                
+                "jmp .while \n"
+    
+                ".L_minus_done: \n"
+                
+                "leave \n"
+                "ret \n"
+                
+                "L_make_minus: \n"
+                "mov rax, [malloc_pointer] \n"
+                "my_malloc 16 \n"
+                "MAKE_LITERAL_CLOSURE rax, L_const2, L_minus \n"
+                "mov rax, [rax] \n"
+                "mov [L_glob" (number->string address) "], rax \n\n" ))))                
+
                 
 (define ass-minus-bin
     (lambda ()      
         (let* 
-            ((address (find-address '- global-var-table)))
+            ((address (find-address 'ass-minus-bin global-var-table)))
             (string-append 
                 "jmp L_make_minus_bin \n" 
                 "L_minus_bin: \n"
@@ -2364,18 +2703,10 @@
                 "mov rsi, rax \n"
                 ;; At his point rsi holds the value of the reduced(!) nominator and r13 holds the value of the reduced(!) denomiantor
                 
-                "mov rax, [malloc_pointer] \n"
-                "my_malloc 8 \n"
-                "mov qword [rax], rsi \n"
-                "shl qword [rax], 4 \n"
-                "or qword [rax], T_INTEGER \n"
+                "MAKE_MALLOC_INTEGER rsi \n"
                 "mov rsi, rax \n"
                 
-                "mov rax, [malloc_pointer] \n"
-                "my_malloc 8 \n"
-                "mov qword [rax], r13 \n"
-                "shl qword [rax], 4 \n"
-                "or qword [rax], T_INTEGER \n"
+                "MAKE_MALLOC_INTEGER r13 \n"
                 "mov r13, rax \n"
                 ;; At his point rsi holds the pointer to the value of the reduced(!) nominator and r13 holds the pointer to the value of the reduced(!) denomiantor
                 
@@ -2404,11 +2735,76 @@
                 "mov rax, [rax] \n"
                 "mov [L_glob" (number->string address) "], rax \n\n" ))))
                 
+(define ass-mul
+    (lambda ()      
+        (let* 
+            ((address (find-address '* global-var-table))
+            (start_label "L_mul")
+            (make_label (string-append "L_make_" start_label))
+            (end_label (string-append "." start_label "_done")))
+            (string-append 
+                "jmp " make_label " \n" 
+                start_label ": \n"
+                "push rbp \n"
+                "mov rbp, rsp \n"
+                
+                "mov r12, 1 \n"
+                "MAKE_MALLOC_INTEGER r12 \n"
+                "mov r15, rax \n" ;; accumulator
+                
+                "NUM_OF_ARGS rcx \n"
+                
+                ;; IF num of args is 0:
+                "cmp rcx, 0 \n"
+                "je " end_label " \n"
+                
+                ;; IF num of args is > 0:
+                "mov r10, 0 \n"
+                                            
+                ;; rcx - limit
+                ;; r8  - current arg
+                ;; r10 - interator. 0 <= r10 < rcx
+                
+                ".while: \n"
+
+                "TAKE_ARG r8, r10 \n"
+                                
+                "push rcx \n"
+                "push r10 \n"
+
+                "push r8 \n"
+                "push r15 \n"
+                "push 3 \n"
+                "push L_const2 \n"
+                "call L_mul_bin \n" ;; r15 / r8
+                "add rsp, 4*8 \n"
+                
+                "pop r10 \n"
+                "pop rcx \n"
+                
+                "mov r15, rax           ;;save in r15 the sum result \n" 
+                
+                "inc r10 \n"
+                "cmp r10, rcx \n"
+                "je " end_label " \n"
+                
+                "jmp .while \n"
+    
+                end_label ": \n"
+                "leave \n"
+                "ret \n"
+                
+                make_label ": \n"
+                "mov rax, [malloc_pointer] \n"
+                "my_malloc 16 \n"
+                "MAKE_LITERAL_CLOSURE rax, L_const2, " start_label " \n"
+                "mov rax, [rax] \n"
+                "mov [L_glob" (number->string address) "], rax \n\n" ))))                     
                 
 (define ass-mul-bin
     (lambda ()      
         (let* 
-            ((address (find-address '* global-var-table)))
+            ((address (find-address 'ass-mul-bin global-var-table)))
             (string-append 
                 "jmp L_make_mul_bin \n" 
                 "L_mul_bin: \n"
@@ -2538,10 +2934,104 @@
                 "mov rax, [rax] \n"
                 "mov [L_glob" (number->string address) "], rax \n\n" ))))
                 
+(define ass-div
+    (lambda ()      
+        (let* 
+            ((address (find-address '/ global-var-table))
+            (start_label "L_div")
+            (make_label (string-append "L_make_" start_label))
+            (end_label (string-append "." start_label "_done")))
+            (string-append 
+                "jmp " make_label " \n" 
+                start_label ": \n"
+                "push rbp \n"
+                "mov rbp, rsp \n"
+                
+                "mov r12, 1 \n"
+                "MAKE_MALLOC_INTEGER r12 \n"
+                "mov r15, rax \n" ;; accumulator
+                
+                "NUM_OF_ARGS rcx \n"
+                
+                ;; IF num of args is 0:
+                "cmp rcx, 0 \n"
+                "je L_incorrect_num_of_args \n"
+                
+                ;; IF num of args is 1:
+                "cmp rcx, 1 \n"
+                "jne .L_more_than_2_args \n"
+                
+                "mov r10, 0 \n"
+                                            
+                "TAKE_ARG r8, r10 \n" ;; r8 = first arg
+                
+                "push rcx \n"
+                "push r10 \n"
+                
+                "push r8 \n"
+                "push r15 \n"
+                "push 3 \n"
+                "push L_const2 \n"
+                "call L_div_bin \n" ;; r15 / r8
+                "add rsp, 4*8 \n"
+                
+                "pop r10 \n"
+                "pop rcx \n"
+                
+                "jmp " end_label " \n"
+
+                ;; If num of args > 1:
+                ".L_more_than_2_args: \n"
+                "mov r10, 0 \n"
+                                            
+                ;; rcx - limit
+                ;; r8  - current arg
+                ;; r10 - interator. 0 <= r10 < rcx
+                
+                "TAKE_ARG r15, r10 \n"
+                "inc r10 \n"
+                
+                ".while: \n"
+
+                "TAKE_ARG r8, r10 \n"
+                                
+                "push rcx \n"
+                "push r10 \n"
+
+                
+                "push r8 \n"
+                "push r15 \n"
+                "push 3 \n"
+                "push L_const2 \n"
+                "call L_div_bin \n" ;; r15 / r8
+                "add rsp, 4*8 \n"
+                
+                "pop r10 \n"
+                "pop rcx \n"
+                
+                "mov r15, rax           ;;save in r15 the sum result \n" 
+                
+                "inc r10 \n"
+                "cmp r10, rcx \n"
+                "je " end_label " \n"
+                
+                "jmp .while \n"
+    
+                end_label ": \n"
+                "leave \n"
+                "ret \n"
+                
+                make_label ": \n"
+                "mov rax, [malloc_pointer] \n"
+                "my_malloc 16 \n"
+                "MAKE_LITERAL_CLOSURE rax, L_const2, " start_label " \n"
+                "mov rax, [rax] \n"
+                "mov [L_glob" (number->string address) "], rax \n\n" ))))               
+ 
 (define ass-div-bin
     (lambda ()      
         (let* 
-            ((address (find-address '/ global-var-table)))
+            ((address (find-address 'ass-div-bin global-var-table)))
             (string-append 
                 "jmp L_make_div_bin \n" 
                 "L_div_bin: \n"
@@ -2639,22 +3129,28 @@
                 "neg rsi \n"
                 
                 ".L_cont: \n"
-               
-                "mov rax, [malloc_pointer] \n"
-                "my_malloc 8 \n"
-
+ 
                 "cmp r13, 1 \n"
                 "je .L_make_integer \n"
+                
+                "mov rax, [malloc_pointer] \n"
+                "my_malloc 8 \n"
                 "mov r10, rax \n"
+                
+                "MAKE_MALLOC_INTEGER rsi \n"
+                "mov rsi, rax \n"
+                
+                "MAKE_MALLOC_INTEGER r13 \n"
+                "mov r13, rax \n"
+                
                 "MAKE_MALLOC_LITERAL_FRACTION r10, rsi, r13 \n"
                 "mov rax, r10 \n"
                 "jmp L_end_div_bin \n"
                 
                 ".L_make_integer: \n"
-                "mov qword [rax], rsi \n"
-                "shl qword [rax], 4 \n"
-                "or qword [rax], T_INTEGER \n"
-                
+                "MAKE_MALLOC_INTEGER rsi \n"
+                "mov rsi, rax \n"
+
                 "L_end_div_bin: \n"
                 "leave \n"
                 "ret \n"

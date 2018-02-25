@@ -137,32 +137,9 @@ pop rax
 ;; MAKE_MALLOC_LITERAL_FRACTION target-address, nominator-value, denominator-value
 ;; Caution! this macro does not check weather if the nominator or the denominator is a integer! must check it before using this macro
 %macro MAKE_MALLOC_LITERAL_FRACTION 3
-;push rax 
+
+push rax
 push rbx 
-;push rsi
-;push r13
-
-;mov rax, [malloc_pointer]
-;my_malloc 8
-;mov qword [rax], %2
-;shl qword [rax], 4
-;or qword [rax], T_INTEGER
-;mov rsi, rax
-
-
-;MAKE_MALLOC_INTEGER rsi, %2
-
-;push qword [rax]
-;call write_sob_if_not_void
-;add rsp, 1*8
-
-;mov rax, [malloc_pointer]
-;my_malloc 8
-;mov qword [rax], %3
-;shl qword [rax], 4
-;or qword [rax], T_INTEGER
-;mov r13, rax
-
 
 mov rax, %1 
 mov qword [rax], %2
@@ -174,15 +151,12 @@ or qword [rax], rbx
 shl qword [rax], TYPE_BITS 
 or qword [rax], T_FRACTION
 
-;pop r13
-;pop rsi
 pop rbx 
-;pop rax 
+pop rax 
 %endmacro
 
 %macro MAKE_MALLOC_LITERAL_INTEGER 1
 
-    
     mov rax, [malloc_pointer]
     my_malloc 8
     mov qword [rax], %1

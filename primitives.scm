@@ -1,7 +1,7 @@
-;; (define number? (lambda (x) (or (integer? x) (rational? x))))
+(define number? (lambda (x) (or (integer? x) (rational? x))))
 ;; 
-;; (define list
-;; 	(lambda x x))
+(define list
+    (lambda x x))
 ;; 	
 ;; (define cadr
 ;; 	(lambda (lst)
