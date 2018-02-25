@@ -227,15 +227,14 @@
 (define primitive-funcs 
     (lambda (lst)
         (append 
-            
+            lst
             '(ass-plus-bin 
             append apply < = > + / * - boolean? car cdr char->integer 
             char? cons denominator integer? integer->char list make-string 
             make-vector map eq? not null? number? numerator pair? procedure? rational? 
             remainder set-car! set-cdr! string-length string-ref string-set! 
             string->symbol string? symbol? symbol->string vector vector-length 
-            vector-ref vector-set! vector? zero? our_gcd)
-            lst ))) 
+            vector-ref vector-set! vector? zero?)))) 
 
 (define initialize-tables-to-asm
     (lambda ()
@@ -418,6 +417,7 @@
             (ass-div-bin)
             (ass-denominator)
             (ass-numerator)
+            (ass-plus)
             
                  
         )))
@@ -697,7 +697,7 @@
                 "mov rdi, [rbp+8] \n"
                 "push rdi \n"
                 
-                ";bla3 \n"
+               
                 " \n"
                 "mov r14, [rsp +8*2] \n"
                 "mov r15, [rbp +8*3] \n"
@@ -887,14 +887,14 @@
                 "cmp " end ", 0 \n"
                 "je " label-end " \n"
                             
-            
+                
                 "push qword L_const2   ; push nil to as first argument \n"
                 "push qword [" i "]      ; push the first element of the iteration \n"
                 "push 3            ; push num of args \n"
                 "push L_const2     ; push empty env (only to keep the form) \n"
                 "call L_cons       ; the return value will be stored in rax \n"
                 "add rsp, 8*4 \n"
-                
+
             
                 label-start ": \n"
                 "   sub " i ", 8 \n"
@@ -996,7 +996,7 @@
                     "mov qword [rbp + 8*3], " (number->string (+ num-of-params 1)) " \n"
                     ;"L_same_num_of_args: \n"
                     "mov r12, " (number->string (+ num-of-params 3)) " \n"
-					
+                    
                     (rearrange_stack_lambda_opt "r11" "r12" "rax")
 
 ;;                     "cmp rax, L_const2 \n"
@@ -1112,8 +1112,8 @@
                 "mov rbp, rsp \n"
                 "CHECK_ARG_NUM_CORRECTNESS 1 \n"
                 "mov rbx, [rbp + 8*4] \n"
-				"mov rbx, [rbx] \n"
-				"mov rax, rbx \n"
+                "mov rbx, [rbx] \n"
+                "mov rax, rbx \n"
                 "TYPE rbx \n"
                 "cmp rbx, T_PAIR \n"
                 "jne L_incorrect_type \n "
@@ -1277,12 +1277,17 @@
                 "mov rbp, rsp \n"
                 "CHECK_ARG_NUM_CORRECTNESS 1 \n"
                 "mov rbx, [rbp + 8*4] \n"
-				"mov rbx, [rbx] \n"
+                "mov rbx, [rbx] \n"
+                "mov rdx, rbx \n"
+                "TYPE rdx \n"
                 "DATA rbx \n"
-                "mov rax, L_const5 \n"
-                "DATA rax \n"
-                "cmp rbx,rax \n"
+                
+                "cmp rdx, T_BOOL \n"
                 "jne not_not \n"
+                
+                "cmp rbx, 0 \n"
+                "jne not_not \n"
+                
                 "mov rax, L_const3 \n"
                 "jmp END_not \n"
                 "not_not: \n"
@@ -2040,6 +2045,76 @@
                 "MAKE_LITERAL_CLOSURE rax, L_const2, L_equals_bin \n"
                 "mov rax, [rax] \n"
                 "mov [L_glob" (number->string address) "], rax \n\n" ))))
+
+(define ass-plus
+    (lambda ()      
+        (let* 
+            ((address (find-address '+ global-var-table)))
+            (string-append 
+                "jmp L_make_plus \n" 
+                "L_plus: \n"
+                "push rbp \n"
+                "mov rbp, rsp \n"
+                
+                "mov r12, 0 \n"
+                "MAKE_MALLOC_INTEGER r12 \n"
+                "mov r15, rax \n" ;; accumulator
+                
+                "NUM_OF_ARGS rcx \n"
+                
+                ;; IF num of args is 0:
+                "cmp rcx, 0 \n"
+                "je .L_plus_done \n"
+                
+                ;; If num of args > 0:
+                "mov r10, 0 \n"
+                                            
+                ;; rcx - limit
+                ;; r8  - current arg
+                ;; r10 - interator. 0 <= r10 < rcx
+                
+                ".while: \n"
+                "TAKE_ARG r8, r10 \n"
+
+                
+                "push rcx \n"
+                "push r10 \n"
+
+;;                 "mov rax, r8 \n"
+;;                 write-sob-string
+                
+                "push r15 \n"
+                "push r8 \n"
+                "push 3 \n"
+                "push L_const2 \n"
+                "call L_plus_bin \n"
+                "add rsp, 4*8 \n"
+                
+                "pop r10 \n"
+                "pop rcx \n"
+                
+                
+                "mov r15, rax           ;;save in r15 the sum result \n" 
+                
+                "inc r10 \n"
+                "cmp r10, rcx \n"
+                "je .L_plus_done \n"
+                
+                "jmp .while \n"
+                
+                
+                
+                ".L_plus_done: \n"
+                
+                "leave \n"
+                "ret \n"
+                
+                "L_make_plus: \n"
+                "mov rax, [malloc_pointer] \n"
+                "my_malloc 16 \n"
+                "MAKE_LITERAL_CLOSURE rax, L_const2, L_plus \n"
+                "mov rax, [rax] \n"
+                "mov [L_glob" (number->string address) "], rax \n\n" ))))                
                 
 (define ass-plus-bin
     (lambda ()      
@@ -2050,6 +2125,8 @@
                 "L_plus_bin: \n"
                 "push rbp \n"
                 "mov rbp, rsp \n"
+                
+            
                 "CHECK_ARG_NUM_CORRECTNESS 2 \n"
                 "mov rax, [rbp + 8*4] \n"
                 "mov rax, [rax] \n"
@@ -2071,11 +2148,11 @@
                 
                 "L_make_frac4: \n"
                 "DATA rax \n"
-                "int_to_frac rax, r8, r9 \n"
+                "int_to_frac rax, r8, r9 \n" 
                 
                 "L_next_arg4: \n"
                 
-                ";At this point the first argument is stored as fraction in r8, r9 \n"
+                ";At this point the first argument is stored as fraction in r8, r9 (3 ==> 3/1) \n"
                 "mov rcx, [rbp + 8*5] \n"
                 "mov rcx, [rcx] \n"
                 "mov rbx, rcx \n"
@@ -2103,6 +2180,7 @@
                 ";At this point the second argument is stored as fraction in r10, r11 \n"
                 
                 ;; calc denominator until: r13 = r9*r11
+                "mov rax, 0 \n"
                 "mov rax, r9 \n"
                 "imul r11 \n"
                 "mov r13, rax \n"
@@ -2111,23 +2189,29 @@
                 
                 ;; calc nominator until: r14 = r8*r11
                 ;;                       rsi = r9*r10
+                "mov rax, 0 \n"
                 "mov rax, r8 \n"
                 "imul r11 \n"
                 "mov r14, rax \n"
                 
+                "mov rax, 0 \n"
                 "mov rax, r9 \n"
                 "imul r10 \n"
                 "mov rsi, rax \n"
+                
+                
                 
                 "add rsi, r14 \n"
                 ;; At his point rsi holds the value of the nominator
                 
                 "push r13 \n"
                 "push rsi \n"
+                
                 "push r13 \n"
                 "push rsi \n"
                 "call gcd \n"
                 "add rsp, 8*2 \n"
+                
                 "pop rsi \n"
                 "pop r13 \n"
                 ;; At his point rax holds the value of the gcd of the nominator (rsi) and the denominator (r13)
@@ -2136,23 +2220,19 @@
                 "my_idiv r13, rdi \n"
                 "mov r13, rax \n"
                 
+                "push r13 \n"
                 "my_idiv rsi, rdi \n"
                 "mov rsi, rax \n"
+                "pop r13 \n"
                 ;; At his point rsi holds the value of the reduced(!) nominator and r13 holds the value of the reduced(!) denomiantor
                 
-                "mov rax, [malloc_pointer] \n"
-                "my_malloc 8 \n"
-                "mov qword [rax], rsi \n"
-                "shl qword [rax], 4 \n"
-                "or qword [rax], T_INTEGER \n"
+               
+                "MAKE_MALLOC_INTEGER rsi \n"
                 "mov rsi, rax \n"
-                
-                "mov rax, [malloc_pointer] \n"
-                "my_malloc 8 \n"
-                "mov qword [rax], r13 \n"
-                "shl qword [rax], 4 \n"
-                "or qword [rax], T_INTEGER \n"
+                               
+                "MAKE_MALLOC_INTEGER r13 \n"
                 "mov r13, rax \n"
+                
                 ;; At his point rsi holds the pointer to the value of the reduced(!) nominator and r13 holds the pointer to the value of the reduced(!) denomiantor
                 
                 "mov rax, [malloc_pointer] \n"
@@ -2161,9 +2241,12 @@
                 "DATA r8 \n"
                 "cmp r8, 1 \n"
                 "je .L_make_integer \n"
+                              
                 "mov r10, rax \n"
                 "MAKE_MALLOC_LITERAL_FRACTION r10, rsi, r13 \n"
                 "mov rax, r10 \n"
+                
+                
                 "jmp L_end_plus_bin \n"
                 
                 ".L_make_integer: \n"
@@ -2259,7 +2342,7 @@
                 "imul r10 \n"
                 "mov r14, rax \n"
                 
-                "blaaa: \n"
+                
                 "sub rsi, r14 \n"
                 ;; At his point rsi holds the value of the nominator
                 

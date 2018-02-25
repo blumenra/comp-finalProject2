@@ -53,12 +53,48 @@
     
 %endmacro
                 
-                
-                
+%macro NUM_OF_ARGS 1
+
+    mov %1, [rbp + 8*3]
+    dec %1
+
+%endmacro
+
+;; rax will hold the pointer to the literal
+;; %1 = data of the literal integer
+%macro MAKE_MALLOC_INTEGER 1
+
+    mov rax, [malloc_pointer]
+    my_malloc 8
+    mov qword [rax], %1
+    shl qword [rax], 4
+    or qword [rax], T_INTEGER
+
+%endmacro   
+
+
+;; %1 = target_arg, %2 = arg index (starting with 0, 1, 2, ...)
+%macro TAKE_ARG 2
+
+    push %2
+    
+    add %2, 4
+    shl %2, 3
+    add %2, rbp
+    mov %1, [%2]
+
+    pop %2
+
+%endmacro  
+
+
 ;; my_idiv %1/%2
 %macro my_idiv 2
 
     push rcx
+    mov rax, 0;
+    mov rcx, 0;
+    
     mov rax, %1
     mov rcx, %2
     
@@ -101,40 +137,47 @@ pop rax
 ;; MAKE_MALLOC_LITERAL_FRACTION target-address, nominator-value, denominator-value
 ;; Caution! this macro does not check weather if the nominator or the denominator is a integer! must check it before using this macro
 %macro MAKE_MALLOC_LITERAL_FRACTION 3
-push rax 
+;push rax 
 push rbx 
-push rsi
-push r13
+;push rsi
+;push r13
 
-mov rax, [malloc_pointer]
-my_malloc 8
-mov qword [rax], %2
-shl qword [rax], 4
-or qword [rax], T_INTEGER
-mov rsi, rax
+;mov rax, [malloc_pointer]
+;my_malloc 8
+;mov qword [rax], %2
+;shl qword [rax], 4
+;or qword [rax], T_INTEGER
+;mov rsi, rax
 
-mov rax, [malloc_pointer]
-my_malloc 8
-mov qword [rax], %3
-shl qword [rax], 4
-or qword [rax], T_INTEGER
-mov r13, rax
+
+;MAKE_MALLOC_INTEGER rsi, %2
+
+;push qword [rax]
+;call write_sob_if_not_void
+;add rsp, 1*8
+
+;mov rax, [malloc_pointer]
+;my_malloc 8
+;mov qword [rax], %3
+;shl qword [rax], 4
+;or qword [rax], T_INTEGER
+;mov r13, rax
 
 
 mov rax, %1 
-mov qword [rax], rsi
+mov qword [rax], %2
 sub qword [rax], start_of_data
 shl qword [rax], ((WORD_SIZE - TYPE_BITS) >> 1) 
-mov rbx, r13
+mov rbx, %3
 sub rbx, start_of_data
 or qword [rax], rbx 
 shl qword [rax], TYPE_BITS 
 or qword [rax], T_FRACTION
 
-pop r13
-pop rsi
+;pop r13
+;pop rsi
 pop rbx 
-pop rax 
+;pop rax 
 %endmacro
 
 %macro MAKE_MALLOC_LITERAL_INTEGER 1
