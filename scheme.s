@@ -463,7 +463,8 @@ malloc_pointer:
     resq 1
 start_of_malloc:
     ;resb gigabyte
-    resb 2^30
+    resb 1073741824
+    ;resb 2^30
     
 extern exit, printf, scanf
 ;global main, write_sob, write_sob_if_not_void

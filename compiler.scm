@@ -3575,13 +3575,65 @@
                 "push rbp \n"
                 "mov rbp, rsp \n"
                 "CHECK_ARG_NUM_CORRECTNESS 2 \n"
-                "mov rbx, [rbp + 8*4] \n"
-				"mov rbx, [rbx] \n"
-				"mov rax, rbx \n"
-                "TYPE rbx \n"
-                "cmp rbx, T_PAIR \n"
+                
+                "mov r10, 0 \n"
+                "TAKE_ARG rbx, r10 \n" ;; rbx = first arg
+                "mov r10, 1 \n"
+                "TAKE_ARG rcx, r10 \n" ;; rcx = second arg
+                
+                
+                
+                
+                "mov rbx, [rbx] \n"
+		"mov rax, rbx \n"
+                "TYPE rax \n"
+                "cmp rax, T_CLOSURE \n"
                 "jne L_incorrect_type \n "
-                "MY_CAR rax \n"
+                
+                
+                "mov rcx, [rcx] \n"
+		"mov rax, rcx \n"
+                "TYPE rax \n"
+                "cmp rax, T_PAIR \n"
+                "jne L_incorrect_type \n "
+                
+                ;; rbx - closure
+                ;; rcx - pair
+                
+                "mov rsi, rbp \n"
+                "mov rdi, [rbp+8] \n"
+                "mov rsi, rbp \n"
+                
+                "mov r8, 0 \n"
+                
+                ".L_loop_apply1: \n"
+                "cmp rcx, L_const2 \n"
+                "je .L_END_loop_apply1 \n"
+                "mov rbx, [rcx] \n"
+                "MY_CAR rbx \n"
+                "push rbx \n"
+                "MY_CDR rcx \n"
+                
+                "inc r8 \n"
+                "jmp .L_loop_apply1 \n"
+                
+                ".L_END_loop_apply1: \n"
+                
+                "mov r9, 0 \n"
+                "mov r10, rsp \n"
+                
+                
+                ".L_loop_apply2: \n"
+                "cmp r9, r8 \n"
+                "je .L_END_loop_apply2 \n"
+                "push [r10] \n"
+                "add r10, 8 \n"
+                "inc r9 \n"
+                
+                "jmp .L_loop_apply2 \n"
+                ".L_END_loop_apply2: \n"
+                
+                
 				
                 end_label ": \n"
                 "leave \n"
