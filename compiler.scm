@@ -426,8 +426,8 @@
             (ass-vector-len)
             (ass-vector-ref)
             (ass-vector-set!)
-			(ass-make-vector)
-			(ass-vector)
+            (ass-make-vector)
+            (ass-vector)
             (ass-set-car!)
             (ass-set-cdr!)
             (ass-remainder)
@@ -447,9 +447,9 @@
             (ass-equal)
             (ass-div)
             (ass-mul)
-			(ass-symbol-to-string)
-			(ass-string-to-symbol)
-            
+            (ass-symbol-to-string)
+            (ass-string-to-symbol)
+            (ass-apply)
                  
         )))
             
@@ -3577,9 +3577,9 @@
                 "CHECK_ARG_NUM_CORRECTNESS 2 \n"
                 
                 "mov r10, 0 \n"
-                "TAKE_ARG rbx, r10 \n" ;; rbx = first arg
+                "TAKE_ARG rbx, r10 \n" ;; rbx = first arg = function
                 "mov r10, 1 \n"
-                "TAKE_ARG rcx, r10 \n" ;; rcx = second arg
+                "TAKE_ARG rcx, r10 \n" ;; rcx = second arg = list of args
                 
                 
                 
@@ -3595,24 +3595,35 @@
 		"mov rax, rcx \n"
                 "TYPE rax \n"
                 "cmp rax, T_PAIR \n"
+                "je .cont \n"
+                                
+                "cmp rax, T_NIL \n"
                 "jne L_incorrect_type \n "
                 
                 ;; rbx - closure
                 ;; rcx - pair
                 
-                "mov rsi, [rbp]             ;; save rbp (top of current stack) in rsi \n"
-                "mov rdi, [rbp+8]           ;; save ret-addr in rdi \n"
+                ".cont: \n"
+                
+                "mov rsi, [rbp]               ;; save rbp (top of current stack) in rsi \n"
+                "mov rdi, [rbp+8]             ;; save ret-addr in rdi \n"
                 "mov r11, [rbp+8*2]           ;; save env in r11 \n"
+                
+                "mov r12, 5 \n"
+                "shl r12, 3 \n"
+                "add r12, rbp                 ;; save pointer to botoom of old frame (one above null) in r12 \n"
 
+                
                 "mov r8, 0 \n"
                 
                 ".L_loop_apply1: \n"
-                "cmp rcx, L_const2 \n"
+                "cmp rcx, [L_const2] \n"
                 "je .L_END_loop_apply1 \n"
-                ;"mov rbx, rcx \n"
-                "MY_CAR rcx \n"
-                "push rcx \n"
-                "MY_CDR rcx \n"
+                "mov rax, rcx \n"
+                "MY_CAR rax \n"
+                "push rax \n"
+                ;"MY_CDR rcx \n"
+                "CDR rcx \n"
                 
                 "inc r8 \n"
                 "jmp .L_loop_apply1 \n"
@@ -3622,21 +3633,49 @@
                 "mov r9, 0 \n"
                 "mov r10, rsp \n"
                 
+                "mov r13, rsp \n"
+                "sub r13, 8                  ;; save pointer to the last argument of the args that will be pushed to stack in r13 \n"
+                
                 ".L_loop_apply2: \n"
                 "cmp r9, r8 \n"
                 "je .L_END_loop_apply2 \n"
-                "push [r10] \n"
+                "push qword [r10] \n"
                 "add r10, 8 \n"
                 "inc r9 \n"
                 
                 "jmp .L_loop_apply2 \n"
                 ".L_END_loop_apply2: \n"
                 
-                "push r8                    ;; push new num of args\n"
-                "push r11 \n"
-                "push rdi \n"
-                "push rsi \n"
+                "inc r8 \n"
+                "push r8                    ;; push new num of args \n"
+                "push r11                   ;; push old env of args \n"
+                "push rdi                   ;; push old ret-addr of args \n"
+                "push rsi                   ;; push old rbp of args \n"
+                
+                "mov r9, r8 \n"
+                "add r9, 3 \n"
+                
+                ".L_loop_apply3: \n"
+                "cmp r9, 0 \n"
+                "je .L_END_loop_apply3 \n"
+                "mov r14, [r13] \n"
+                "mov [r12], r14 \n"
+                "sub r13, 8 \n"
+                "sub r12, 8 \n"
+                "dec r9 \n"
 
+                "jmp .L_loop_apply3 \n"
+
+                ".L_END_loop_apply3: \n"
+                
+                "add r12, 8 \n"
+                "mov rsp, r12 \n"
+                "mov rbp, [r12] \n"
+                "add rsp, 8 \n"
+                
+                "CLOSURE_CODE rbx \n"
+                
+                "jmp rbx \n"
                 
 				
                 end_label ": \n"
