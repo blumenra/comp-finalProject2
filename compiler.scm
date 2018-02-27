@@ -3600,18 +3600,18 @@
                 ;; rbx - closure
                 ;; rcx - pair
                 
-                "mov rsi, rbp \n"
-                "mov rdi, [rbp+8] \n"
-                "mov rsi, rbp \n"
-                
+                "mov rsi, [rbp]             ;; save rbp (top of current stack) in rsi \n"
+                "mov rdi, [rbp+8]           ;; save ret-addr in rdi \n"
+                "mov r11, [rbp+8*2]           ;; save env in r11 \n"
+
                 "mov r8, 0 \n"
                 
                 ".L_loop_apply1: \n"
                 "cmp rcx, L_const2 \n"
                 "je .L_END_loop_apply1 \n"
-                "mov rbx, [rcx] \n"
-                "MY_CAR rbx \n"
-                "push rbx \n"
+                ;"mov rbx, rcx \n"
+                "MY_CAR rcx \n"
+                "push rcx \n"
                 "MY_CDR rcx \n"
                 
                 "inc r8 \n"
@@ -3621,7 +3621,6 @@
                 
                 "mov r9, 0 \n"
                 "mov r10, rsp \n"
-                
                 
                 ".L_loop_apply2: \n"
                 "cmp r9, r8 \n"
@@ -3633,6 +3632,11 @@
                 "jmp .L_loop_apply2 \n"
                 ".L_END_loop_apply2: \n"
                 
+                "push r8                    ;; push new num of args\n"
+                "push r11 \n"
+                "push rdi \n"
+                "push rsi \n"
+
                 
 				
                 end_label ": \n"
