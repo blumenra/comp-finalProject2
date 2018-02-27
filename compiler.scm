@@ -510,10 +510,13 @@
             )))
         
 (define write-sob-string
-    (string-append 
+    (string-append
+        "push rax \n"
         "push qword [rax]\n"
         "call write_sob_if_not_void\n"
-        "add rsp, 1*8\n"))
+        "add rsp, 1*8\n"
+        "pop rax \n"
+        ))
 
 (define compile-scheme-file 
     (lambda (src-file trg-file)
@@ -881,11 +884,7 @@
             (code-lable (gen-lambda-lable))                         ; L_lambda_code75
             (end-lambda-lable (string-append "END_" code-lable)))   ; END_L_lambda_code75
                 (set! num_of_last_param num-of-params)
-                (string-append
-                
-                    ;";;;;;;;;;;;;;; params: " (list->string (map number->string params)) "\n"
-                    ";;;;;;;;;;;;;; params: " (car params) "\n"
-                
+                (string-append                
                     "mov rax, [malloc_pointer] \n"
                     "my_malloc 16 \n"
                     "mov rbx, [malloc_pointer] \n"
@@ -2542,9 +2541,6 @@
                 
                 "push rcx \n"
                 "push r10 \n"
-
-;;                 "mov rax, r8 \n"
-;;                 write-sob-string
                 
                 "push r15 \n"
                 "push r8 \n"
@@ -3030,6 +3026,8 @@
                 "mov rbp, rsp \n"
                 "CHECK_ARG_NUM_CORRECTNESS 2 \n"
                 "mov rax, [rbp + 8*4] \n"
+                               
+                
                 "mov rax, [rax] \n"
                 "mov rbx, rax \n"
                 "TYPE rbx \n"
@@ -3055,6 +3053,12 @@
                 
                 ";At this point the first argument is stored as fraction in r8, r9 \n"
                 "mov rcx, [rbp + 8*5] \n"
+                
+;;                 "push rcx \n"
+;;                 "mov rax, rcx \n"
+;;                 write-sob-string
+;;                 "pop rcx \n"
+                
                 "mov rcx, [rcx] \n"
                 "mov rbx, rcx \n"
                 "TYPE rbx \n"
@@ -3079,6 +3083,8 @@
                 "L_start_mul_bin: \n"
                 ";At this point the first argument is stored as fraction in r8, r9 \n"
                 ";At this point the second argument is stored as fraction in r10, r11 \n"
+                
+                
                 
                 ;; calc denominator until: r13 = r9*r11
                 "mov rax, r9 \n"
