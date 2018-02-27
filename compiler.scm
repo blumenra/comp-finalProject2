@@ -731,6 +731,7 @@
                 "push rbx \n"
                 ; until here same as the regular applic
 
+                "mov r11, [rbp] \n"
                 "mov rdi, [rbp+8] \n"
                 "push rdi \n"
                 
@@ -755,6 +756,7 @@
                 ;;;;;
        
                 "mov rsp, r9 \n"
+                "mov rbp, r11 \n"
                 "mov rax, [rax] \n"
                 "CLOSURE_CODE rax \n"
                 "jmp rax \n"))))
