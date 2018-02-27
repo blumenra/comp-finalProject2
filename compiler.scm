@@ -90,8 +90,8 @@
                 (cond 
                     ((vector? (cadr lst-sexp)) 
                         (append (vector->list (cadr lst-sexp)) (cdr lst-sexp)))
-                    ((string? (cadr lst-sexp))
-                        (cons (string->symbol (cadr lst-sexp)) (cdr lst-sexp)))
+                    ;((string? (cadr lst-sexp))
+                     ;   (cons (string->symbol (cadr lst-sexp)) (cdr lst-sexp)))
                     (else (cdr lst-sexp))))
             (else (append (extract-consts (car lst-sexp)) 
                         (extract-consts (cdr lst-sexp)))))))
@@ -186,24 +186,6 @@
 
                         
 (define fvar-token? (make-token-pred 'fvar))
-            
-;; (define make-append-to-table
-;;     (lambda (table)
-;;         (lambda (x1)
-;;             (display `(x1: ,x1))
-;;             (set! table (cons table x1)))))
-;; 
-;; 
-;; (define append-to-global (make-append-to-table global-var-table))
-            
-            
-;; (define add-to-global-var-table
-;;     (lambda (lst-sexp)
-;;         (cond 
-;;             ((or (null? lst-sexp) (not (pair? lst-sexp))) '())
-;;             ((fvar-token? lst-sexp) (append-to-global (cdr lst-sexp)))
-;;             (else (append-to-global (append (add-to-global-var-table (car lst-sexp)) 
-;;                                             (add-to-global-var-table (cdr lst-sexp))))))))
     
 (define extract-fvars
     (lambda (lst-sexp)
@@ -326,10 +308,7 @@
                                     "\t MAKE_LITERAL_VECTOR0 "
                                     (string-append "\t" "MAKE_LITERAL_VECTOR " vec_elements))
                                 
-                                "\n")))))))  )                             
-                                
-;MAKE_LITERAL_VECTOR sob8, sob7, sobInt1, sobInt2, sobInt3, sob4 
-  
+                                "\n")))))))  )                               
 
 (define gen-fvar-label
     (lambda (fvar)
@@ -355,9 +334,49 @@
         (string-append 
             "global_table:\n"
             (append-str-list (map gen-fvar-label global-var-table))
+			
+			"\n symbols_table:\n"
+			"\t dq SOB_UNDEFINED \n"
+			
             "\n")))
 
+(define initialize-symbols-table-to-asm
+    (lambda ()
+        (let* 
+			((sym-lst (filter (lambda (x) (equal? (caaddr x) T_SYMBOL)) consts-table)) ;all symbols
+			(addr-str-lst (map (lambda (x) (cadr (caddr x))) sym-lst))) ;address of string of symbols
+			(insert-symbols addr-str-lst))))
 			
+(define insert-symbols
+    (lambda (lst)
+		(string-append 
+			(if (null? lst)
+				"mov rax, L_const2 \n"
+				(gen-symbols-table lst))
+			"mov [symbols_table], rax \n"
+            "\n")))
+			
+(define gen-symbols-table
+    (lambda (lst)			
+        (if (null? (cdr lst))
+			(string-append
+				"push qword L_const2 \n"
+                "push qword L_const" (number->string (car lst)) "\n"
+                "push 3 \n"				; push num of args
+                "push L_const2 \n"		; push empty env (only to keep the form)
+                "call L_cons \n"		; the return value will be stored in rax
+                "add rsp, 8*4 \n")
+				
+			(string-append
+				(gen-symbols-table (cdr lst))
+				"push rax \n"
+                "push qword L_const" (number->string (car lst)) "\n"
+                "push 3 \n"				; push num of args
+                "push L_const2 \n"		; push empty env (only to keep the form)
+                "call L_cons \n"		; the return value will be stored in rax
+                "add rsp, 8*4 \n"
+				))))	
+			   
 (define print-macro-str
     (string-append
         "%include \"scheme.s\"\n\n"
@@ -387,10 +406,11 @@
             (ass-pred? 'integer? 'integer "T_INTEGER")
             (ass-pred? 'pair? 'pair "T_PAIR")
             (ass-pred? 'procedure? 'procedure "T_CLOSURE") 
-            (ass-pred? 'rational? 'rational "T_FRACTION")
+            ;(ass-pred? 'rational? 'rational "T_FRACTION")
             (ass-pred? 'string? 'string "T_STRING")
             (ass-pred? 'symbol? 'symbol "T_SYMBOL")
             (ass-pred? 'vector? 'vector "T_VECTOR")
+			(ass-rational?)
             (ass-car)
             (ass-cdr)
             (ass-integer-to-char)
@@ -401,11 +421,13 @@
             (ass-eq?)
             (ass-string-len)
             (ass-string-ref)
-            ;(ass-make-string)
+            (ass-make-string)
             (ass-string-set!)
             (ass-vector-len)
             (ass-vector-ref)
             (ass-vector-set!)
+			(ass-make-vector)
+			(ass-vector)
             (ass-set-car!)
             (ass-set-cdr!)
             (ass-remainder)
@@ -425,6 +447,8 @@
             (ass-equal)
             (ass-div)
             (ass-mul)
+			(ass-symbol-to-string)
+			(ass-string-to-symbol)
             
                  
         )))
@@ -443,6 +467,7 @@
             "mov rax, malloc_pointer \n"
             "mov qword [rax], start_of_malloc \n\n"
             
+			(initialize-symbols-table-to-asm)
             (load-primitive-funcs)
             )))
             
@@ -1065,7 +1090,7 @@
     (lambda (pred? pred str-type)      
         (let* 
             ((address (find-address pred? global-var-table))
-            (str-pred (symbol->string pred)))
+            (str-pred (symbol->string pred?)))
             (string-append 
                 "jmp L_make_" str-pred "\n"
                 "L_" str-pred ": \n"
@@ -1089,6 +1114,42 @@
                 "mov rax, [malloc_pointer] \n"
                 "my_malloc 16 \n"
                 "MAKE_LITERAL_CLOSURE rax, L_const2, L_" str-pred " \n"
+                "mov rax, [rax] \n"
+                "mov [L_glob" (number->string address) "], rax \n\n" ))))       
+       
+(define ass-rational?
+    (lambda ()      
+        (let* 
+            ((address (find-address 'rational? global-var-table)))
+            (string-append 
+                "jmp L_make_rational \n"
+                "L_rational: \n"
+                "push rbp \n"
+                "mov rbp, rsp \n"
+                "CHECK_ARG_NUM_CORRECTNESS 1 \n"
+                "mov rbx, [rbp + 8*4] \n"
+                "mov rbx, [rbx] \n"
+                "TYPE rbx \n"
+                "cmp rbx, T_FRACTION \n"
+                "jne L_rational_maybe_int \n "
+                "mov rax, L_const3 \n"
+                "jmp END_rational \n"
+				"L_rational_maybe_int: \n"
+				"cmp rbx, T_INTEGER \n"
+				"jne L_rational_else \n "
+				"mov rax, L_const3 \n"
+                "jmp END_rational \n"
+				
+                "L_rational_else: \n"
+                "mov rax, L_const5 \n" 
+                "END_rational: \n"
+                "leave \n"
+                "ret \n"
+                
+                "L_make_rational: \n"
+                "mov rax, [malloc_pointer] \n"
+                "my_malloc 16 \n"
+                "MAKE_LITERAL_CLOSURE rax, L_const2, L_rational \n"
                 "mov rax, [rax] \n"
                 "mov [L_glob" (number->string address) "], rax \n\n" ))))       
        
@@ -1333,7 +1394,20 @@
                 "mov rbp, rsp \n"
                 "CHECK_ARG_NUM_CORRECTNESS 2 \n"
                 "mov rbx, [rbp + 8*4] \n"
+                "mov r8, [rbx] \n"
+                "TYPE r8 \n"
                 "mov rcx, [rbp + 8*5] \n"
+                "mov r9, [rcx] \n"
+                "TYPE r9 \n"
+                "cmp r8, r9 \n"
+                "jne not_eq \n"
+                "cmp r8, T_SYMBOL \n"
+                "jne .L_compare_addr \n"
+                "mov rbx, [rbx] \n"
+                "mov rcx, [rcx] \n"
+                "DATA_SYM rbx \n"
+                "DATA_SYM rcx \n"
+                ".L_compare_addr: \n"
                 "cmp rbx, rcx \n"
                 "jne not_eq \n" 
                 "mov rax, L_const3 \n"
@@ -1473,10 +1547,13 @@
             ((address (find-address 'make-string global-var-table)))
             (string-append 
                 "jmp L_make_make_string \n" 
-                "L_make_string: \n"
+                "L_make_string_new: \n"
                 "push rbp \n"
                 "mov rbp, rsp \n"
-                "CHECK_ARG_NUM_CORRECTNESS 2 \n"
+				
+				"mov r15, [rbp + 8*3] \n"
+				"dec r15 \n"
+				
                 "mov rax, [rbp + 8*4] \n"
                 "mov rax, [rax] \n"
                 "mov rbx, rax \n"
@@ -1485,54 +1562,65 @@
                 "jne L_incorrect_type \n "
                 "mov rbx, rax \n"
                 "DATA rbx \n"
+				
+				"cmp r15, 1 \n"
+				"je .L_default_string \n"
+				
+				"CHECK_ARG_NUM_CORRECTNESS 2 \n"
+				
                 "mov rcx, [rbp + 8*5] \n"
                 "mov rcx, [rcx] \n"
                 "mov rdx, rcx \n"
                 "TYPE rdx \n"
                 "cmp rdx, T_CHAR \n"
                 "jne L_incorrect_type \n "
-                
-                
-                "mov r10, rbx ;save the length \n"
-                
-                "mov r9, rbx                        ;use r9 as size to malloc \n"
-                "mov r8 , 64                         ;space for length \n"
-                "add r9, r8                         ;make space for the length\n"
-                "add r9, 4                          ;make space for the type \n"
-                "push r10 \n"
-                "push r8 \n"
-                "push r9 \n"
-                
-                "DATA rcx \n"
-                
-                "pop r9                             ;restore r9 \n"
+				
+				"DATA rcx \n"
+				"jmp .L_cont \n"
+  
+				".L_default_string: \n"
+				"mov rax, [malloc_pointer] \n"
+                "my_malloc 8 \n"
+                "mov qword [rax],  0 \n"
+                "shl qword [rax], 4 \n"
+                "or qword [rax], T_CHAR \n"
+				"mov rcx, rax \n"
+				"mov rcx, [rcx] \n"
+				"DATA rcx \n"
+				
+				".L_cont: \n"
+                "mov r10, rbx  \n" 		;save the length
+       
                 "mov rax, [malloc_pointer] \n"
-                "mov rdx, rax \n"
-                "my_malloc r9 \n"
+                "my_malloc r10 \n"
+				"mov rdx, rax \n"
+				
                 "L_make_string_loop: \n"
                 "cmp rbx, 0 \n"
                 "je L_end_loop \n"
-                "mov [rdx],rcx \n"
-                "add rdx, 1 \n"
+                "mov [rax],rcx \n"
+                "add rax, 1 \n"
                 "sub rbx, 1 \n"
                 "jmp L_make_string_loop \n"
                 "L_end_loop: \n"
                 
-                "pop r8 \n"
-                "pop r10 \n"
-                "shl qword [rax], 64 \n"
-                "or qword [rax], r10 \n"
-		"shl qword [rax], 4 \n"
-                "or qword [rax], T_STRING \n"
-                
-                
+				"mov rax, [malloc_pointer] \n"
+                "my_malloc 8 \n"
+				"mov [rax], r10 \n"
+				
+				"shl qword [rax], 34 \n"
+				"sub rdx, start_of_data \n"
+				"shl rdx, 4 \n"
+				"or rdx, T_STRING \n"
+				"or qword [rax], rdx \n"
+
                 "leave \n"
                 "ret \n"
                 
                 "L_make_make_string: \n"
                 "mov rax, [malloc_pointer] \n"
                 "my_malloc 16 \n"
-                "MAKE_LITERAL_CLOSURE rax, L_const2, L_make_string \n"
+                "MAKE_LITERAL_CLOSURE rax, L_const2, L_make_string_new \n"
                 "mov rax, [rax] \n"
                 "mov [L_glob" (number->string address) "], rax \n\n" ))))				
 				
@@ -1644,6 +1732,130 @@
                 "mov rax, [malloc_pointer] \n"
                 "my_malloc 16 \n"
                 "MAKE_LITERAL_CLOSURE rax, L_const2, L_vector_ref \n"
+                "mov rax, [rax] \n"
+                "mov [L_glob" (number->string address) "], rax \n\n" ))))
+				
+(define ass-make-vector
+    (lambda ()      
+        (let* 
+            ((address (find-address 'make-vector global-var-table)))
+            (string-append 
+                "jmp L_make_make_vector \n" 
+                "L_make_vector_new: \n"
+                "push rbp \n"
+                "mov rbp, rsp \n"
+				"mov r15, [rbp + 8*3] \n"
+				"dec r15 \n"
+				
+                "mov rax, [rbp + 8*4] \n"
+                "mov rax, [rax] \n"
+                "mov rbx, rax \n"
+                "TYPE rbx \n"
+                "cmp rbx, T_INTEGER \n"
+                "jne L_incorrect_type \n "
+                "mov rbx, rax \n"
+                "DATA rbx \n"
+				"cmp r15, 1 \n"
+				"je .L_default_vector \n"
+				
+				"CHECK_ARG_NUM_CORRECTNESS 2 \n"
+                "mov rcx, [rbp + 8*5] \n"
+				"jmp .L_cont \n"
+
+				".L_default_vector: \n"
+				"MAKE_MALLOC_INTEGER 0 \n"
+				"mov rcx, rax \n"
+				
+				".L_cont: \n"
+                "mov r10, rbx  \n" 		
+				"mov r9, rbx  \n"	;save the length
+                "shl r10, 3 \n"
+       
+                "mov rax, [malloc_pointer] \n"
+                "my_malloc r10 \n"
+				"mov rdx, rax \n"
+				
+                "L_make_vector_loop: \n"
+                "cmp rbx, 0 \n"
+                "je .L_end_loop \n"
+                "mov qword [rax], rcx \n"
+                "add rax, 8 \n"
+                "sub rbx, 1 \n"
+                "jmp L_make_vector_loop \n"
+                ".L_end_loop: \n"
+                
+				"mov rax, [malloc_pointer] \n"
+                "my_malloc 8 \n"
+				"mov [rax], r9 \n"
+				
+				"shl qword [rax], 34 \n"
+				"sub rdx, start_of_data \n"
+				"shl rdx, 4 \n"
+				"or rdx, T_VECTOR \n"
+				"or qword [rax], rdx \n"
+
+                "leave \n"
+                "ret \n"
+                
+                "L_make_make_vector: \n"
+                "mov rax, [malloc_pointer] \n"
+                "my_malloc 16 \n"
+                "MAKE_LITERAL_CLOSURE rax, L_const2, L_make_vector_new \n"
+                "mov rax, [rax] \n"
+                "mov [L_glob" (number->string address) "], rax \n\n" ))))
+				
+(define ass-vector
+    (lambda ()      
+        (let* 
+            ((address (find-address 'vector global-var-table)))
+            (string-append 
+                "jmp L_make_vector \n" 
+                "L_vector_new: \n"
+                "push rbp \n"
+                "mov rbp, rsp \n"
+				"mov r15, [rbp + 8*3] \n" 
+				"dec r15 \n"				
+				
+				"mov r10, r15  \n"
+                "shl r10, 3 \n"
+	   
+                "mov rax, [malloc_pointer] \n"
+                "my_malloc r10 \n"
+				"mov rdx, rax \n"
+				
+				"mov r9, 0 \n"	;counter
+				"mov r11,4 \n"
+
+                "L_vector_loop: \n"
+                "cmp r9, r15 \n"
+                "je .L_end_loop \n"
+				"mov r11, r9 \n"
+				"add r11, 4 \n"
+				"shl r11, 3 \n"
+				"mov r11, [rbp + r11] \n"
+                "mov qword [rax], r11 \n"
+                "add rax, 8 \n"
+                "add r9, 1 \n"
+                "jmp L_vector_loop \n"
+                ".L_end_loop: \n"
+                
+				"mov rax, [malloc_pointer] \n"
+                "my_malloc 8 \n"
+				"mov [rax], r15 \n"
+				
+				"shl qword [rax], 34 \n"
+				"sub rdx, start_of_data \n"
+				"shl rdx, 4 \n"
+				"or rdx, T_VECTOR \n"
+				"or qword [rax], rdx \n"
+
+                "leave \n"
+                "ret \n"
+                
+                "L_make_vector: \n"
+                "mov rax, [malloc_pointer] \n"
+                "my_malloc 16 \n"
+                "MAKE_LITERAL_CLOSURE rax, L_const2, L_vector_new \n"
                 "mov rax, [rax] \n"
                 "mov [L_glob" (number->string address) "], rax \n\n" ))))
 				
@@ -3234,3 +3446,155 @@
                 "MAKE_LITERAL_CLOSURE rax, L_const2, L_denominator \n"
                 "mov rax, [rax] \n"
                 "mov [L_glob" (number->string address) "], rax \n\n" ))))
+				
+(define ass-symbol-to-string
+    (lambda ()      
+        (let* 
+            ((address (find-address 'symbol->string global-var-table)))
+            (string-append 
+                "jmp L_make_symbol_to_string \n" 
+                "L_symbol_to_string: \n"
+                "push rbp \n"
+                "mov rbp, rsp \n"
+                "CHECK_ARG_NUM_CORRECTNESS 1 \n"
+                "mov rax, [rbp + 8*4] \n"
+                "mov rax, [rax] \n"
+                "mov rbx, rax \n"
+                "TYPE rbx \n"
+                "cmp rbx, T_SYMBOL \n"
+                "jne L_incorrect_type \n "
+                "DATA rax \n"
+                "add rax, start_of_data \n"
+				
+                "leave \n"
+                "ret \n"
+                
+                "L_make_symbol_to_string: \n"
+                "mov rax, [malloc_pointer] \n"
+                "my_malloc 16 \n"
+                "MAKE_LITERAL_CLOSURE rax, L_const2, L_symbol_to_string \n"
+                "mov rax, [rax] \n"
+                "mov [L_glob" (number->string address) "], rax \n\n" ))))
+
+(define ass-string-to-symbol
+    (lambda ()      
+        (let* 
+            ((address (find-address 'string->symbol global-var-table)))
+            (string-append 
+                "jmp L_make_string_to_symbol \n" 
+                "L_string_to_symbol: \n"
+                "push rbp \n"
+                "mov rbp, rsp \n"
+                "CHECK_ARG_NUM_CORRECTNESS 1 \n"
+                "mov rdx, [rbp + 8*4] \n"
+                ;"mov rax, [rax] \n"
+                "mov rbx, [rdx] \n"
+                "TYPE rbx \n"
+                "cmp rbx, T_STRING \n"
+                "jne L_incorrect_type \n "
+                
+                ;; rdx = pointer to input string
+                "bla0: \n"
+			
+                "mov rbx, [symbols_table] \n"
+                "mov rbx, [rbx] \n"
+                
+                "mov r15, rdx \n"
+                
+                "mov rax, [rdx] \n"
+                ".L_string_to_symbol_loop: \n"
+                "cmp rbx, [L_const2] \n"
+                "je .L_end_string_to_symbol_loop \n"
+                "mov rcx, rbx \n"
+                "MY_CAR rcx \n"
+                
+                "mov r9, [rcx] \n" ;; r9 - current string literal            
+                
+                "push rcx, \n"
+                "push rax, \n"
+                
+                "COMPARE_STRINGS r9, rax \n"
+                
+                "pop rax, \n"
+                "pop rcx, \n"
+        
+                "cmp r11, 1 \n"
+                "je .L_was_in_sym_table \n"
+                "CDR rbx \n"
+                "jmp .L_string_to_symbol_loop \n"
+                                                
+                ".L_was_in_sym_table: \n"
+                "mov r15, rcx \n"
+                "jmp .L_end_string_to_symbol \n"
+                
+                ".L_end_string_to_symbol_loop: \n"
+                "push rdx \n"
+                "push r15 \n"
+                
+                "push qword [symbols_table] \n"
+                "push qword rdx \n"
+                "push 3 \n"
+                "push L_const2 \n"
+                "call L_cons \n"
+                "add rsp, 8*4 \n"
+
+                "pop r15 \n"
+                "pop rdx \n"
+
+                "mov [symbols_table], rax \n"
+
+                ".L_end_string_to_symbol:"
+                "mov rax, [malloc_pointer] \n"
+                "my_malloc 8 \n"
+		"sub r15, start_of_data \n"
+                "mov qword [rax],  r15 \n"
+                "shl qword [rax], 4 \n"
+                "or qword [rax], T_SYMBOL \n"
+		
+                "leave \n"
+                "ret \n"
+                
+                "L_make_string_to_symbol: \n"
+                "mov rax, [malloc_pointer] \n"
+                "my_malloc 16 \n"
+                "MAKE_LITERAL_CLOSURE rax, L_const2, L_string_to_symbol \n"
+                "mov rax, [rax] \n"
+                "mov [L_glob" (number->string address) "], rax \n\n" ))))
+                
+                
+(define ass-apply
+    (lambda ()      
+        (let* 
+            ((address (find-address 'apply global-var-table))
+            (start_label "L_apply")
+            (make_label (string-append "L_make_" start_label))
+            (end_label (string-append "." start_label "_done")))
+            (string-append 
+                "jmp " make_label " \n" 
+                start_label ": \n"
+                "push rbp \n"
+                "mov rbp, rsp \n"
+                "CHECK_ARG_NUM_CORRECTNESS 2 \n"
+                "mov rbx, [rbp + 8*4] \n"
+				"mov rbx, [rbx] \n"
+				"mov rax, rbx \n"
+                "TYPE rbx \n"
+                "cmp rbx, T_PAIR \n"
+                "jne L_incorrect_type \n "
+                "MY_CAR rax \n"
+				
+                end_label ": \n"
+                "leave \n"
+                "ret \n"
+                
+                make_label ": \n"
+                "mov rax, [malloc_pointer] \n"
+                "my_malloc 16 \n"
+                "MAKE_LITERAL_CLOSURE rax, L_const2, " start_label " \n"
+                "mov rax, [rax] \n"
+                "mov [L_glob" (number->string address) "], rax \n\n" ))))
+                
+                
+                
+                
+                

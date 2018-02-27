@@ -1,21 +1,19 @@
 (define number? (lambda (x) (or (integer? x) (rational? x))))
-;; 
+
 (define list
     (lambda x x))
+    
+(define append
+    (lambda (lst1 lst2)
+      	(if (null? lst1)
+            lst2
+            (cons (car lst1) (append (cdr lst1) lst2)))))
+
 ;; 	
 ;; (define cadr
 ;; 	(lambda (lst)
 ;; 		(car (cdr lst))))
-;; 
-;; (define +
-;;     (lambda x
-;;         (let ((len (length x)))
-;;             (cond 
-;;                 ((= len 0) 0)
-;;                 ((= len 1) (car x))
-;;                 (else (ass-plus-bin (car x) (+ (cdr x))))))))
-;; 
-;; 	
+
 ;; (define map 
 ;;     (lambda (func lst)
 ;;        (if (null? lst)

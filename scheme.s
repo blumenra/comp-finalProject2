@@ -22,6 +22,7 @@
 %define CHAR_PAGE 12
 %define CHAR_RETURN 13
 %define CHAR_SPACE 32
+%define CHAR_DOUBLE_QOUTE 34
 
 %define TYPE_BITS 4
 %define WORD_SIZE 64
@@ -85,8 +86,67 @@
 
     pop %2
 
-%endmacro  
+%endmacro
 
+%macro PRINT_SYM_TABLE 0
+
+push rax
+
+mov rax, [symbols_table]  
+push qword [rax] 
+call write_sob_if_not_void 
+add rsp, 1*8
+
+pop rax
+
+%endmacro
+
+;; compare between string literal(!) %1 and string literal(!) %2, and return result of true/false (by 1/0) in r11!
+%macro COMPARE_STRINGS 2
+
+push r8
+push r10
+mov r11, 0
+
+mov r8, %1
+mov r10, %2
+
+STRING_LENGTH r8
+STRING_LENGTH r10
+
+cmp r8, r10
+jne %%L_check_strings_loop_end
+
+STRING_ELEMENTS %1
+STRING_ELEMENTS %2
+
+%%L_check_strings_loop:
+                
+cmp r8, 0
+je %%L_chenge_to_true
+                
+mov cl, byte [%1]
+cmp cl, byte [%2]
+jne %%L_check_strings_loop_end
+
+inc %1
+inc %2
+dec r8
+jmp %%L_check_strings_loop
+
+
+%%L_chenge_to_true:
+mov r11, 1
+jmp %%L_check_strings_loop_end
+
+
+
+%%L_check_strings_loop_end:
+
+pop r10
+pop r8
+
+%endmacro
 
 ;; my_idiv %1/%2
 %macro my_idiv 2
@@ -402,8 +462,9 @@ section .bss
 malloc_pointer:
     resq 1
 start_of_malloc:
-    resb gigabyte
-        
+    ;resb gigabyte
+    resb 2^30
+    
 extern exit, printf, scanf
 ;global main, write_sob, write_sob_if_not_void
 section .text
@@ -571,7 +632,7 @@ section .data
 .nul:
 	db "#\nul", 0
 .special:
-	db "#\x%02x", 0
+	db "#\x%01x", 0
 .regular:
 	db "#\%c", 0
 
@@ -651,6 +712,8 @@ write_sob_string:
 	mov bl, byte [rax]
 	and rbx, 0xff
 
+	cmp rbx, CHAR_DOUBLE_QOUTE
+	je .ch_double_qoute
 	cmp rbx, CHAR_TAB
 	je .ch_tab
 	cmp rbx, CHAR_NEWLINE
@@ -685,6 +748,11 @@ write_sob_string:
 	mov rdi, .fs_return
 	mov rsi, rbx
 	jmp .printf
+	
+.ch_double_qoute:
+	mov rdi, .fs_double_qoute
+	mov rsi, rbx
+	jmp .printf
 
 .ch_newline:
 	mov rdi, .fs_newline
@@ -715,15 +783,19 @@ section .data
 .fs_simple_char:
 	db "%c", 0
 .fs_hex_char:
-	db "\x%02x;", 0	
+	db "\x%01x;", 0	
 .fs_tab:
 	db "\t", 0
 .fs_page:
 	db "\f", 0
 .fs_return:
 	db "\r", 0
+.fs_double_qoute:
+	db 92, 34,  0
 .fs_newline:
 	db "\n", 0
+
+
 
 write_sob_pair:
 	push rbp
@@ -944,7 +1016,7 @@ section .data
 .fs_simple_char:
 	db "%c", 0
 .fs_hex_char:
-	db "\x%02x;", 0	
+	db "\x%01x;", 0	
 .fs_tab:
 	db "\t", 0
 .fs_page:

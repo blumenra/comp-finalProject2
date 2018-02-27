@@ -1,0 +1,25 @@
+(vector-length '#())
+(define emptier '#())
+(vector-length emptier)
+(vector-length '#(1))
+(vector-length '#(1 #\1))
+(vector-length '#("maor" #\x53))
+(vector-length '#("\t" "\f"))
+(vector-length '#("\x53;" "\\"))
+(define vectorer '#(1 2 3 4 #t #f))
+(vector-length vectorer)
+(define checker (lambda (x) (vector-length x)))
+(checker vectorer)
+(checker emptier)
+
+;Alon & Ziv: Wont pass because we didnt implement (vector)
+;(vector-length (vector))
+
+
+;Alon & Ziv: Not sure if the following tests are suppoed to return #t or #f
+;; (eq? (checker vectorer) 6)
+;; (eq? (checker vectorer) 18/3)
+;; (eq? (checker vectorer) 7)
+;; (eq? (checker emptier) 0)
+;; (define vectorer2 '#(4 5 6 7 #f #t))
+;; (eq? (vector-length vectorer) (vector-length vectorer2))
