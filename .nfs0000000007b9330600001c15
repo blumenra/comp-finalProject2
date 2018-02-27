@@ -882,10 +882,6 @@
             (end-lambda-lable (string-append "END_" code-lable)))   ; END_L_lambda_code75
                 (set! num_of_last_param num-of-params)
                 (string-append
-                
-                    ;";;;;;;;;;;;;;; params: " (list->string (map number->string params)) "\n"
-                    ";;;;;;;;;;;;;; params: " (car params) "\n"
-                
                     "mov rax, [malloc_pointer] \n"
                     "my_malloc 16 \n"
                     "mov rbx, [malloc_pointer] \n"
